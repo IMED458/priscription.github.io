@@ -790,64 +790,28 @@
         }
 
         function printForm() {
-            // Store current page state
-            const originalPage = currentPage;
-            
             // Show all pages for printing
             document.querySelectorAll('.page').forEach(page => {
-                page.style.display = 'block !important';
+                page.style.display = 'block';
                 page.classList.add('active');
             });
             
-            // Add print-specific styles
-            const printStyle = document.createElement('style');
-            printStyle.id = 'print-styles';
-            printStyle.textContent = `
-                @media print {
-                    .page {
-                        display: block !important;
-                        page-break-after: always;
-                        page-break-inside: avoid;
-                        min-height: 250mm;
-                        margin-bottom: 0;
-                    }
-                    .page:last-child {
-                        page-break-after: auto;
-                    }
-                    .navigation, .save-btn {
-                        display: none !important;
-                    }
-                    .vitals-table {
-                        page-break-inside: avoid;
-                    }
-                }
-            `;
-            document.head.appendChild(printStyle);
+            // Hide navigation during print
+            document.querySelector('.navigation').style.display = 'none';
             
-            // Print after a short delay to ensure styles are applied
+            // Print
+            window.print();
+            
+            // Restore normal view after print
             setTimeout(() => {
-                window.print();
-                
-                // Clean up after printing
-                setTimeout(() => {
-                    // Remove print styles
-                    const printStyleElement = document.getElementById('print-styles');
-                    if (printStyleElement) {
-                        printStyleElement.remove();
+                document.querySelectorAll('.page').forEach((page, index) => {
+                    if (index + 1 !== currentPage) {
+                        page.style.display = 'none';
+                        page.classList.remove('active');
                     }
-                    
-                    // Restore original view
-                    document.querySelectorAll('.page').forEach((page, index) => {
-                        if (index + 1 !== originalPage) {
-                            page.style.display = 'none';
-                            page.classList.remove('active');
-                        }
-                    });
-                    
-                    // Show current page
-                    showPage(originalPage);
-                }, 500);
-            }, 100);
+                });
+                document.querySelector('.navigation').style.display = 'flex';
+            }, 1000);
         }
 
         function showMessage(text, type) {
@@ -903,5 +867,5 @@
         // Initialize the application
         document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99fe5f8065bb13ad',t:'MTc2MzM3MzU0Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99fe56d3304f95a5',t:'MTc2MzM3MzE4Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

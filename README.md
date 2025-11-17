@@ -454,8 +454,8 @@
             });
             table.appendChild(headerRow);
 
-            // Create medication rows (15 rows for medications)
-            for (let i = 1; i <= 15; i++) {
+            // Create medication rows (10 rows for medications)
+            for (let i = 1; i <= 10; i++) {
                 const row = document.createElement('tr');
                 row.innerHTML = `<td class="parameter-label"><input type="text" placeholder="მედიკამენტი ${i}" name="med_name_${i}" style="width: 100%; border: none; background: transparent; font-size: 11px;"></td>`;
                 hours.forEach(hour => {
@@ -612,7 +612,7 @@
         function collectMedications() {
             const medications = {};
             // Collect medication names and schedules
-            for (let i = 1; i <= 15; i++) {
+            for (let i = 1; i <= 10; i++) {
                 const nameInput = document.querySelector(`input[name="med_name_${i}"]`);
                 if (nameInput && nameInput.value.trim()) {
                     medications[`med_name_${i}`] = nameInput.value.trim();
@@ -768,7 +768,7 @@
         function collectCurrentMedications() {
             const medications = {};
             // Collect medication names and schedules
-            for (let i = 1; i <= 15; i++) {
+            for (let i = 1; i <= 10; i++) {
                 const nameInput = document.querySelector(`input[name="med_name_${i}"]`);
                 if (nameInput && nameInput.value.trim()) {
                     medications[`med_name_${i}`] = nameInput.value.trim();
@@ -867,5 +867,5 @@
         // Initialize the application
         document.addEventListener('DOMContentLoaded', initializeApp);
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99fe56d3304f95a5',t:'MTc2MzM3MzE4Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99fe55bd605c95a5',t:'MTc2MzM3MzE0My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

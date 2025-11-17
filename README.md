@@ -65,7 +65,7 @@
   <div class="nav">
     <button class="btn active" data-page="1">1</button>
     <button class="btn" data-page="2">2</button>
-    <button class="btn print" onclick="doPrint()">ბეჭდვა</button>
+    <button class="btn print" onclick="startPrint()">ბეჭდვა</button>
   </div>
 
   <!-- გვერდი 1 -->
@@ -106,11 +106,9 @@
     document.getElementById('name2').textContent = n;
   }
 
-  // X მონიშვნა
   function toggleMark(e) {
     if (e.target.classList.contains('check')) {
       e.target.classList.toggle('marked');
-      // გავაახლოთ რიგის filled სტატუსი
       const row = e.target.closest('tr');
       if (row) checkRowFilled(row);
     }
@@ -125,7 +123,7 @@
   // მედიკამენტები
   let html = `<tr><th class="drug">მედ/დოზა</th>${HOURS.map(h=>`<th class="time">${h}</th>`).join('')}</tr>`;
   for(let i=1;i<=18;i++){
-    html += `<tr class="medrow">
+    html += `<tr>
       <td class="drug"><input type="text" placeholder="${i}" oninput="checkRowFilled(this.closest('tr'))"></td>
       ${HOURS.map(()=>`<td><div class="check" onclick="toggleMark(event)"></div></td>`).join('')}
     </tr>`;
@@ -148,24 +146,27 @@
   oth.forEach(p=> ohtml += `<tr><td class="drug">${p}</td>${HOURS.map(()=>`<td><input></td>`).join('')}</tr>`);
   document.getElementById('other').innerHTML = ohtml;
 
-  // ინიციალიზაცია
+  // თარიღი
   document.getElementById('today').value = new Date().toISOString().split('T')[0];
   updName();
 
   // გვერდების გადართვა
-  document.querySelectorAll('[data-page]').forEach(b=>{
-    b.onclick = ()=>{
-      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-      document.getElementById('p'+b.dataset.page).classList.add('active');
-      document.querySelectorAll('[data-page]').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('[data-page]').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('p' + b.dataset.page).classList.add('active');
+      document.querySelectorAll('[data-page]').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
     };
   });
 
-  // ბეჭდვა
-  function doPrint() {
-    // ყველა რიგის განახლება
-    document.querySelectorAll('.medrow').forEach(row => checkRowFilled(row));
+  // ============ ბეჭდვა – ახლა 100%-ით მუშაობს ============
+  function startPrint() {
+    // გავაახლოთ ყველა რიგის filled სტატუსი
+    document.querySelectorAll('#meds tr').forEach((row, idx) => {
+      if (idx === 0) return; // თავის სათაური
+      checkRowFilled(row);
+    });
     window.print();
   }
 </script>

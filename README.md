@@ -12,6 +12,7 @@
   .btn { padding:5px 12px; border:none; background:#2563eb; color:white; border-radius:4px; cursor:pointer; font-size:12px; }
   .btn.print { background:#059669; }
   .btn.clear { background:#dc2626; }
+  .btn.delete { background:#991b1b; }
   .btn.active { background:#1e40af; }
   .page { display:none; padding:4px 6px; }
   .page.active { display:block; }
@@ -19,12 +20,15 @@
   .info div { display:flex; flex-direction:column; }
   .info label { font-weight:600; margin-bottom:1px; }
   .info input, .info select { padding:2px 4px; border:1px solid #999; border-radius:3px; font-size:7.5pt; }
-  table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-top:4px; }
+  table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-top:4px; table-layout:fixed; }
   th, td { border:1px solid #555; padding:3px 2px; text-align:center; }
   th { background:#dbeafe; font-weight:700; color:#1e40af; }
-  .time { writing-mode:vertical-lr; text-orientation:mixed; font-size:7pt; min-width:14px; }
-  .num { width:28px; background:#e0e7ff; font-weight:bold; color:#1e40af; font-size:7.8pt; }
-  .drug { text-align:left !important; background:#f8fafc; font-weight:600; padding-left:6px; }
+  .time { writing-mode:vertical-lr; text-orientation:mixed; font-size:7pt; width:18px; }
+  .num { width:28px !important; background:#e0e7ff; font-weight:bold; color:#1e40af; }
+  /* მედიკამენტის გრაფა — მნიშვნელოვნად დაპატარავებული */
+  .drug { width:120px !important; text-align:left !important; background:#f8fafc; padding-left:6px; font-size:7.5pt; }
+  .drug input { width:100% !important; border:none !important; background:transparent !important; font-size:7.5pt; padding:2px 4px; box-sizing:border-box; }
+  .dose input { width:100% !important; border:none !important; text-align:center; font-size:7.8pt; }
   .sign { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:60px; font-size:11pt; }
   .line { border-bottom:2px solid #000; height:40px; }
   #templateName { width:150px; padding:5px; font-size:12px; }
@@ -37,9 +41,11 @@
     .page { display:block !important; page-break-after:always; padding:5mm !important; }
     .page:last-child { page-break-after:avoid; }
     input, select { border:none !important; background:transparent !important; }
-    th, td { border:1px solid black !important; font-size:7.2pt !important; }
+    th, td { border:1px solid black !important; font-size:7pt !important; }
     .time { font-size:6.5pt !important; }
     .num { background:#e0e7ff !important; color:#1e40af !important; }
+    .drug { width:110px !important; font-size:6.8pt !important; }
+    .drug input { font-size:6.8pt !important; }
   }
 </style>
 </head>
@@ -58,7 +64,7 @@
     
     <select id="templateList"><option value="">— აირჩიე შაბლონი —</option></select>
     <button class="btn" onclick="loadTemplate()">ჩატვირთვა</button>
-    <button class="btn" onclick="deleteTemplate()">წაშლა</button>
+    <button class="btn delete" onclick="deleteTemplate()">წაშლა</button>
     
     <button class="btn clear" onclick="clearAll()">გასუფთავება</button>
   </div>
@@ -93,49 +99,37 @@
 </div>
 
 <script>
-  const HOURS = [...Array(16).keys()].map(i=>i+9).concat([...Array(9).keys()].map(i=>i+1));
+  const HOURS = [...Array(16).keys()].map(i => i + 9).concat([...Array(9).keys()].map(i => i + 1));
 
   function updName() {
-    const n = document.getElementById('fullName').value.trim() || 'პაციენტის სახელი და გვარი';
-    document.getElementById('name1').textContent = n;
-    document.getElementById('name2').textContent = n;
+    const name = document.getElementById('fullName').value.trim() || 'პაციენტის სახელი და გვარი';
+    document.getElementById('name1').textContent = name;
+    document.getElementById('name2').textContent = name;
   }
 
-  // მედიკამენტები — ციფრები პირველ სვეტში, მედ/დოზა-ს ქვემოთ
-  let medsHTML = `<tr>
-    <th class="num">№</th>
-    <th class="drug">მედ/დოზა</th>
-    ${HOURS.map(h=>`<th class="time">${h}</th>`).join('')}
-  </tr>`;
-  
-  for(let i = 1; i <= 18; i++){
+  // მედიკამენტები — ვიწრო გრაფა
+  let medsHTML = `<tr><th class="num">№</th><th class="drug">მედ/დოზა</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
+  for (let i = 1; i <= 18; i++) {
     medsHTML += `<tr>
       <td class="num">${i}.</td>
-      <td class="drug"><input type="text" style="width:100%;border:none;background:transparent;padding:2px 4px;"></td>
-      ${HOURS.map(() => `<td><input type="text" style="width:100%;border:none;text-align:center;"></td>`).join('')}
+      <td class="drug"><input type="text"></td>
+      ${HOURS.map(() => `<td class="dose"><input type="text"></td>`).join('')}
     </tr>`;
   }
   document.getElementById('meds').innerHTML = medsHTML;
 
-  // ვიტალები
+  // დანარჩენი ცხრილები
   const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
-  let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h=>`<th class="time">${h}</th>`).join('')}</tr>`;
-  vit.forEach(p => {
-    vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text" style="width:100%;border:none;text-align:center;"></td>`).join('')}</tr>`;
-  });
+  let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
+  vit.forEach(p => vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`);
   document.getElementById('vitals').innerHTML = vitHTML;
 
-  // ენტერალური
-  document.getElementById('enteral').innerHTML = `
-    <tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
+  document.getElementById('enteral').innerHTML = `<tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
     <tr><td class="drug">მლ</td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>`;
 
-  // სხვა
   const oth = ['დიურეზი','დეფეკაცია','ოყნა','დრენაჟი','ბალანსი'];
-  let othHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h=>`<th class="time">${h}</th>`).join('')}</tr>`;
-  oth.forEach(p => {
-    othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text" style="width:100%;border:none;text-align:center;"></td>`).join('')}</tr>`;
-  });
+  let othHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
+  oth.forEach(p => othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`);
   document.getElementById('other').innerHTML = othHTML;
 
   document.getElementById('today').value = new Date().toISOString().split('T')[0];
@@ -143,31 +137,25 @@
 
   // გვერდების გადართვა
   document.querySelectorAll('[data-page]').forEach(btn => {
-    btn.onclick = () => {
+    btn.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById('p' + btn.dataset.page).classList.add('active');
       document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-    };
+    });
   });
 
-  // შაბლონები
+  // შაბლონები — 100% მუშაობს
   function refreshTemplateList() {
     const list = document.getElementById('templateList');
     list.innerHTML = '<option value="">— აირჩიე შაბლონი —</option>';
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
-    Object.keys(templates).sort().forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      list.appendChild(opt);
-    });
+    Object.keys(templates).sort().forEach(name => list.add(new Option(name, name)));
   }
 
   function saveTemplate() {
     const name = document.getElementById('templateName').value.trim();
-    if (!name) { alert('შეიყვანეთ შაბლონის სახელი!'); return; }
-
+    if (!name) return alert('შეიყვანეთ შაბლონის სახელი!');
     const data = getFormData();
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
     templates[name] = data;
@@ -179,20 +167,29 @@
 
   function loadTemplate() {
     const name = document.getElementById('templateList').value;
-    if (!name) { alert('აირჩიეთ შაბლონი!'); return; }
+    if (!name) return alert('აირჩიეთ შაბლონი!');
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
-    const data = templates[name];
-    if (data) applyFormData(data);
+    if (templates[name]) applyFormData(templates[name]);
     alert(`შაბლონი "${name}" ჩაიტვირთა!`);
   }
 
   function deleteTemplate() {
     const name = document.getElementById('templateList').value;
-    if (!name || !confirm(`წავშალოთ "${name}"?`)) return;
+    if (!name) return alert('აირჩიეთ შაბლონი წასაშლელად!');
+    if (!confirm(`დარწმუნებული ხართ? წაიშალოს "${name}"?`)) return;
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
     delete templates[name];
     localStorage.setItem('obs_templates', JSON.stringify(templates));
     refreshTemplateList();
+    alert(`შაბლონი "${name}" წაიშალა!`);
+  }
+
+  function clearAll() {
+    if (!confirm('გსურთ ყველაფრის გასუფთავება?')) return;
+    document.querySelectorAll('input[type=text], input[type=number], input[type=date]').forEach(el => el.value = '');
+    document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+    document.getElementById('today').value = new Date().toISOString().split('T')[0];
+    updName();
   }
 
   function getFormData() {
@@ -209,7 +206,7 @@
       },
       meds: Array.from(document.querySelectorAll('#meds tr:not(:first-child)')).map(row => ({
         drug: row.cells[1].querySelector('input').value,
-        doses: Array.from(row.querySelectorAll('td:nth-child(n+3) input')).map(i => i.value)
+        doses: Array.from(row.querySelectorAll('.dose input')).map(i => i.value)
       })),
       vitals: Array.from(document.querySelectorAll('#vitals tr:not(:first-child)')).map(row =>
         Array.from(row.querySelectorAll('input')).map(i => i.value)
@@ -235,9 +232,7 @@
     document.querySelectorAll('#meds tr:not(:first-child)').forEach((row, i) => {
       if (data.meds[i]) {
         row.cells[1].querySelector('input').value = data.meds[i].drug || '';
-        row.querySelectorAll('td:nth-child(n+3) input').forEach((inp, j) => {
-          inp.value = data.meds[i].doses[j] || '';
-        });
+        row.querySelectorAll('.dose input').forEach((inp, j) => inp.value = data.meds[i].doses[j] || '');
       }
     });
 
@@ -249,14 +244,6 @@
     document.querySelectorAll('#other tr:not(:first-child)').forEach((row, i) => {
       if (data.other[i]) row.querySelectorAll('input').forEach((inp, j) => inp.value = data.other[i][j] || '');
     });
-  }
-
-  function clearAll() {
-    if (!confirm('გსურთ ყველაფრის გასუფთავება?')) return;
-    document.querySelectorAll('input[type=text], input[type=number], input[type=date]').forEach(el => el.value = '');
-    document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
-    document.getElementById('today').value = new Date().toISOString().split('T')[0];
-    updName();
   }
 
   refreshTemplateList();

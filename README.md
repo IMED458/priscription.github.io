@@ -12,7 +12,6 @@
   .btn { padding:5px 12px; border:none; background:#2563eb; color:white; border-radius:4px; cursor:pointer; font-size:12px; }
   .btn.print { background:#059669; }
   .btn.clear { background:#dc2626; }
-  .btn.delete { background:#991b1b; }
   .btn.active { background:#1e40af; }
   .page { display:none; padding:4px 6px; }
   .page.active { display:block; }
@@ -20,14 +19,12 @@
   .info div { display:flex; flex-direction:column; }
   .info label { font-weight:600; margin-bottom:1px; }
   .info input, .info select { padding:2px 4px; border:1px solid #999; border-radius:3px; font-size:7.5pt; }
-  table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-top:4px; table-layout:fixed; }
+  table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-top:4px; }
   th, td { border:1px solid #555; padding:3px 2px; text-align:center; }
   th { background:#dbeafe; font-weight:700; color:#1e40af; }
-  .time { writing-mode:vertical-lr; text-orientation:mixed; font-size:7pt; width:16px; }
-  .num { width:28px !important; background:#e0e7ff; font-weight:bold; color:#1e40af; }
-  .drug { text-align:left !important; background:#f8fafc; padding-left:8px; }
-  .drug input { width:100% !important; border:none !important; background:transparent !important; font-size:7.8pt; padding:4px 6px; box-sizing:border-box; }
-  .dose input { width:100% !important; border:none !important; text-align:center; font-size:7.8pt; }
+  .time { writing-mode:vertical-lr; text-orientation:mixed; font-size:7pt; min-width:14px; }
+  .num { width:28px; background:#e0e7ff; font-weight:bold; color:#1e40af; font-size:7.8pt; }
+  .drug { text-align:left !important; background:#f8fafc; font-weight:600; padding-left:6px; }
   .sign { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:60px; font-size:11pt; }
   .line { border-bottom:2px solid #000; height:40px; }
   #templateName { width:150px; padding:5px; font-size:12px; }
@@ -61,7 +58,7 @@
     
     <select id="templateList"><option value="">— აირჩიე შაბლონი —</option></select>
     <button class="btn" onclick="loadTemplate()">ჩატვირთვა</button>
-    <button class="btn delete" onclick="deleteTemplate()">წაშლა</button>
+    <button class="btn" onclick="deleteTemplate()">წაშლა</button>
     
     <button class="btn clear" onclick="clearAll()">გასუფთავება</button>
   </div>
@@ -96,40 +93,49 @@
 </div>
 
 <script>
-  const HOURS = [...Array(16).keys()].map(i => i + 9).concat([...Array(9).keys()].map(i => i + 1));
+  const HOURS = [...Array(16).keys()].map(i=>i+9).concat([...Array(9).keys()].map(i=>i+1));
 
   function updName() {
-    const name = document.getElementById('fullName').value.trim() || 'პაციენტის სახელი და გვარი';
-    document.getElementById('name1').textContent = name;
-    document.getElementById('name2').textContent = name;
+    const n = document.getElementById('fullName').value.trim() || 'პაციენტის სახელი და გვარი';
+    document.getElementById('name1').textContent = n;
+    document.getElementById('name2').textContent = n;
   }
 
-  // მედიკამენტები
-  let medsHTML = `<tr><th class="num">№</th><th class="drug">მედ/დოზა</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
-  for (let i = 1; i <= 18; i++) {
+  // მედიკამენტები — ციფრები პირველ სვეტში, მედ/დოზა-ს ქვემოთ
+  let medsHTML = `<tr>
+    <th class="num">№</th>
+    <th class="drug">მედ/დოზა</th>
+    ${HOURS.map(h=>`<th class="time">${h}</th>`).join('')}
+  </tr>`;
+  
+  for(let i = 1; i <= 18; i++){
     medsHTML += `<tr>
       <td class="num">${i}.</td>
-      <td class="drug"><input type="text"></td>
-      ${HOURS.map(() => `<td class="dose"><input type="text"></td>`).join('')}
+      <td class="drug"><input type="text" style="width:100%;border:none;background:transparent;padding:2px 4px;"></td>
+      ${HOURS.map(() => `<td><input type="text" style="width:100%;border:none;text-align:center;"></td>`).join('')}
     </tr>`;
   }
   document.getElementById('meds').innerHTML = medsHTML;
 
   // ვიტალები
   const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
-  let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
+  let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h=>`<th class="time">${h}</th>`).join('')}</tr>`;
   vit.forEach(p => {
-    vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
+    vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text" style="width:100%;border:none;text-align:center;"></td>`).join('')}</tr>`;
   });
   document.getElementById('vitals').innerHTML = vitHTML;
 
-  // ენტერალური + სხვა
-  document.getElementById('enteral').innerHTML = `<tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
+  // ენტერალური
+  document.getElementById('enteral').innerHTML = `
+    <tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
     <tr><td class="drug">მლ</td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>`;
 
+  // სხვა
   const oth = ['დიურეზი','დეფეკაცია','ოყნა','დრენაჟი','ბალანსი'];
-  let othHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
-  oth.forEach(p => othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`);
+  let othHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h=>`<th class="time">${h}</th>`).join('')}</tr>`;
+  oth.forEach(p => {
+    othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text" style="width:100%;border:none;text-align:center;"></td>`).join('')}</tr>`;
+  });
   document.getElementById('other').innerHTML = othHTML;
 
   document.getElementById('today').value = new Date().toISOString().split('T')[0];
@@ -137,28 +143,31 @@
 
   // გვერდების გადართვა
   document.querySelectorAll('[data-page]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.onclick = () => {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById('p' + btn.dataset.page).classList.add('active');
       document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-    });
+    };
   });
 
-  // === შაბლონები ===
+  // შაბლონები
   function refreshTemplateList() {
     const list = document.getElementById('templateList');
     list.innerHTML = '<option value="">— აირჩიე შაბლონი —</option>';
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
     Object.keys(templates).sort().forEach(name => {
-      const opt = new Option(name, name);
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
       list.appendChild(opt);
     });
   }
 
   function saveTemplate() {
     const name = document.getElementById('templateName').value.trim();
-    if (!name) return alert('შეიყვანეთ შაბლონის სახელი!');
+    if (!name) { alert('შეიყვანეთ შაბლონის სახელი!'); return; }
+
     const data = getFormData();
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
     templates[name] = data;
@@ -170,7 +179,7 @@
 
   function loadTemplate() {
     const name = document.getElementById('templateList').value;
-    if (!name) return alert('აირჩიეთ შაბლონი!');
+    if (!name) { alert('აირჩიეთ შაბლონი!'); return; }
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
     const data = templates[name];
     if (data) applyFormData(data);
@@ -179,21 +188,11 @@
 
   function deleteTemplate() {
     const name = document.getElementById('templateList').value;
-    if (!name) return alert('აირჩიეთ შაბლონი წასაშლელად!');
-    if (!confirm(`დარწმუნებული ხართ? წაიშალოს "${name}"?`)) return;
+    if (!name || !confirm(`წავშალოთ "${name}"?`)) return;
     const templates = JSON.parse(localStorage.getItem('obs_templates') || '{}');
     delete templates[name];
     localStorage.setItem('obs_templates', JSON.stringify(templates));
     refreshTemplateList();
-    alert(`შაბლონი "${name}" წაიშალა!`);
-  }
-
-  function clearAll() {
-    if (!confirm('გსურთ ყველაფრის გასუფთავება?')) return;
-    document.querySelectorAll('input[type=text], input[type=number], input[type=date]').forEach(el => el.value = '');
-    document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
-    document.getElementById('today').value = new Date().toISOString().split('T')[0];
-    updName();
   }
 
   function getFormData() {
@@ -210,7 +209,7 @@
       },
       meds: Array.from(document.querySelectorAll('#meds tr:not(:first-child)')).map(row => ({
         drug: row.cells[1].querySelector('input').value,
-        doses: Array.from(row.querySelectorAll('.dose input')).map(i => i.value)
+        doses: Array.from(row.querySelectorAll('td:nth-child(n+3) input')).map(i => i.value)
       })),
       vitals: Array.from(document.querySelectorAll('#vitals tr:not(:first-child)')).map(row =>
         Array.from(row.querySelectorAll('input')).map(i => i.value)
@@ -236,7 +235,9 @@
     document.querySelectorAll('#meds tr:not(:first-child)').forEach((row, i) => {
       if (data.meds[i]) {
         row.cells[1].querySelector('input').value = data.meds[i].drug || '';
-        row.querySelectorAll('.dose input').forEach((inp, j) => inp.value = data.meds[i].doses[j] || '');
+        row.querySelectorAll('td:nth-child(n+3) input').forEach((inp, j) => {
+          inp.value = data.meds[i].doses[j] || '';
+        });
       }
     });
 
@@ -250,7 +251,14 @@
     });
   }
 
-  // გაშვება
+  function clearAll() {
+    if (!confirm('გსურთ ყველაფრის გასუფთავება?')) return;
+    document.querySelectorAll('input[type=text], input[type=number], input[type=date]').forEach(el => el.value = '');
+    document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+    document.getElementById('today').value = new Date().toISOString().split('T')[0];
+    updName();
+  }
+
   refreshTemplateList();
 </script>
 </body>

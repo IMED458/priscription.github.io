@@ -2,6 +2,11 @@
 <head>
 <meta charset="UTF-8">
 <title>დაკვირვების ფურცელი</title>
+
+<!-- საიტის ლოგო / favicon (ფაილი: priscription.png უნდა იდოს index.html-ის გვერდით) -->
+<link rel="icon" type="image/png" href="priscription.png">
+<link rel="shortcut icon" type="image/png" href="priscription.png">
+
 <style>
   body { font-family: Arial, sans-serif; margin:0; padding:4px; background:#f0f9ff; position:relative; }
   .c { max-width:297mm; margin:auto; background:white; border-radius:8px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.1); }
@@ -349,7 +354,7 @@
 
   window.saveTemplate = async function() {
     if (saveBtn.classList.contains('disabled')) {
-      alert("ინტერნეტი არ არის — შენახვა невозможებელია");
+      alert("ინტერნეტი არ არის — შენახვა შეუძლებელია");
       return;
     }
     const name = document.getElementById('templateName').value.trim();
@@ -381,10 +386,10 @@
       const drug = row.cells[1].querySelector('input').value.trim();
       const doses = [];
       row.querySelectorAll('.dose input').forEach(inp => doses.push(inp.value.trim()));
-      meds.push({ drug, doses });   // array of objects, each has an array – ეს ნებადართულია
+      meds.push({ drug, doses });
     });
 
-    // vitals – array of objects {values:[...]} (არა array-of-arrays)
+    // vitals – array of objects {values:[...]}
     const vitals = Array.from(document.querySelectorAll('#vitals tr:not(:first-child)')).map(row => ({
       values: Array.from(row.querySelectorAll('input')).map(i => i.value.trim())
     }));
@@ -392,7 +397,7 @@
     // enteral – უბრალო მასივი
     const enteral = Array.from(document.querySelectorAll('#enteral input')).map(i => i.value.trim());
 
-    // other – ასევე array of objects {values:[...]}
+    // other – array of objects {values:[...]}
     const other = Array.from(document.querySelectorAll('#other tr:not(:first-child)')).map(row => ({
       values: Array.from(row.querySelectorAll('input')).map(i => i.value.trim())
     }));

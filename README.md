@@ -96,7 +96,7 @@
     <div class="info">
       <div><label>პაციენტი</label><input type="text" id="fullName" oninput="updName()"></div>
       <div><label>ისტ.№</label><input type="text" id="hist"></div>
-      <div><label>სქესი</label><select id="gender"><option>-</option><option>მ</option><option>ქ</option></select></div>
+      <div><label>სქესი</label><select id="gender"><option>-</option><option>მამრ.</option><option>მდედრ.</option></select></div>
       <div><label>ასაკი</label><input type="number" id="age"></div>
       <div><label>შემოსვლა</label><input type="date" id="admission"></div>
       <div><label>თარიღი</label><input type="date" id="today"></div>
@@ -168,17 +168,22 @@
 
   async function checkFirebaseConnection() {
     try {
-      await getDocs(query(collection(db, "observation_templates")));
+      await getDocs(query(collection(db, "observation_templates"), orderBy("createdAt")));
       updateFirebaseStatus(true);
     } catch (err) {
       updateFirebaseStatus(false);
     }
   }
 
-  window.addEventListener('online', () => { statusEl.textContent = "ხელახლა დაკავშირება..."; statusEl.className = "status-connecting"; setTimeout(checkFirebaseConnection, 1000); });
+  window.addEventListener('online', () => {
+    statusEl.textContent = "ხელახლა დაკავშირება...";
+    statusEl.className = "status-connecting";
+    setTimeout(checkFirebaseConnection, 1000);
+  });
   window.addEventListener('offline', () => updateFirebaseStatus(false));
   checkFirebaseConnection();
 
+  // საათობრივი ბადე – უცვლელად
   const HOURS = [...Array(16).keys()].map(i => i + 9).concat([...Array(9).keys()].map(i => i + 1));
 
   function updName() {
@@ -186,8 +191,9 @@
     document.getElementById('name1').textContent = name;
     document.getElementById('name2').textContent = name;
   }
+  window.updName = updName;
 
-  // 34 ხაზი + სათაურები
+  // მედიკაციების ცხრილი
   let medsHTML = `<tr><th class="num">№</th><th class="drug">ინფუზიური-ტრანსფ.თერაპია</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
   for (let i = 1; i <= 34; i++) {
     let drugText = '';
@@ -206,22 +212,32 @@
   }
   document.getElementById('meds').innerHTML = medsHTML;
 
+  // vitals
   const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
   let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
-  vit.forEach(p => vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`);
+  vit.forEach(p => {
+    vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
+  });
   document.getElementById('vitals').innerHTML = vitHTML;
 
-  document.getElementById('enteral').innerHTML = `<tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
-    <tr><td class="drug">მლ</td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>`;
+  // enteral
+  document.getElementById('enteral').innerHTML = `
+    <tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
+    <tr><td class="drug">მლ</td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+  `;
 
+  // other
   const oth = ['დიურეზი','დეფეკაცია','ოყნა','დრენაჟი','ბალანსი'];
   let othHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
-  oth.forEach(p => othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`);
+  oth.forEach(p => {
+    othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
+  });
   document.getElementById('other').innerHTML = othHTML;
 
   document.getElementById('today').value = new Date().toISOString().split('T')[0];
   updName();
 
+  // გვერდების გადართვა
   document.querySelectorAll('[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -231,9 +247,9 @@
     });
   });
 
-  // კლავიატურა
+  // კლავიატურით მოძრაობა
   document.addEventListener('keydown', function(e) {
-    if (!['INPUT'].includes(document.activeElement.tagName)) return;
+    if (document.activeElement.tagName !== 'INPUT') return;
     if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) return;
 
     const inputs = Array.from(document.querySelectorAll('input[type=text], input[type=number], input[type=date]'));
@@ -259,14 +275,21 @@
     }
   });
 
-  // შაბლონები — 100% გამოსწორებული
   function openTemplateModal() {
-    if (templatesBtn.classList.contains('disabled')) return alert("ინტერნეტი არ არის");
+    if (templatesBtn.classList.contains('disabled')) {
+      alert("ინტერნეტი არ არის — შაბლონები მიუწვდომელია");
+      return;
+    }
     loadTemplatesFromFirebase();
     document.getElementById('templateModal').style.display = 'flex';
   }
 
-  function closeModal() { document.getElementById('templateModal').style.display = 'none'; }
+  function closeModal() {
+    document.getElementById('templateModal').style.display = 'none';
+  }
+
+  window.openTemplateModal = openTemplateModal;
+  window.closeModal = closeModal;
 
   async function loadTemplatesFromFirebase() {
     const itemsDiv = document.getElementById('templateItems');
@@ -275,20 +298,27 @@
     try {
       const q = query(collection(db, "observation_templates"), orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
-      if (snapshot.empty) { noTemplates.style.display = 'block'; return; }
+      if (snapshot.empty) {
+        noTemplates.style.display = 'block';
+        return;
+      }
       noTemplates.style.display = 'none';
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
         const div = document.createElement('div');
         div.className = 'template-item';
-        div.innerHTML = `<strong>${data.name}</strong>
+        div.innerHTML = `
+          <strong>${data.name}</strong>
           <div>
-            <button class="btn" style="padding:6px 12px; font-size:12px; margin-left:8px;" onclick="loadTemplateById('${doc.id}')">ჩატვირთვა</button>
-            <button class="btn delete" style="padding:6px 12px; font-size:12px;" onclick="deleteTemplateById('${doc.id}', this)">წაშლა</button>
-          </div>`;
+            <button class="btn" style="padding:6px 12px; font-size:12px; margin-left:8px;" onclick="loadTemplateById('${docSnap.id}')">ჩატვირთვა</button>
+            <button class="btn delete" style="padding:6px 12px; font-size:12px;" onclick="deleteTemplateById('${docSnap.id}', this)">წაშლა</button>
+          </div>
+        `;
         itemsDiv.appendChild(div);
       });
-    } catch (err) { alert("შეცდომა: " + err.message); }
+    } catch (err) {
+      alert("შეცდომა: " + err.message);
+    }
   }
 
   window.loadTemplateById = async function(id) {
@@ -299,7 +329,9 @@
         alert(`შაბლონი „${snap.data().name}“ ჩაიტვირთა!`);
         closeModal();
       }
-    } catch (err) { alert("ჩატვირთვის შეცდომა: " + err.message); }
+    } catch (err) {
+      alert("ჩატვირთვის შეცდომა: " + err.message);
+    }
   };
 
   window.deleteTemplateById = async function(id, btn) {
@@ -307,16 +339,26 @@
     try {
       await deleteDoc(doc(db, "observation_templates", id));
       btn.closest('.template-item').remove();
-      if (!document.getElementById('templateItems').hasChildNodes()) document.getElementById('noTemplates').style.display = 'block';
-    } catch (err) { alert("წაშლის შეცდომა: " + err.message); }
+      if (!document.getElementById('templateItems').hasChildNodes()) {
+        document.getElementById('noTemplates').style.display = 'block';
+      }
+    } catch (err) {
+      alert("წაშლის შეცდომა: " + err.message);
+    }
   };
 
   window.saveTemplate = async function() {
-    if (saveBtn.classList.contains('disabled')) return alert("ინტერნეტი არ არის");
+    if (saveBtn.classList.contains('disabled')) {
+      alert("ინტერნეტი არ არის — შენახვა невозможებელია");
+      return;
+    }
     const name = document.getElementById('templateName').value.trim();
-    if (!name) return alert('შეიყვანეთ შაბლონის სახელი!');
+    if (!name) {
+      alert('შეიყვანეთ შაბლონის სახელი!');
+      return;
+    }
 
-    const payload = getFormDataSafe();  // ← აქ არის გამოსწორება!
+    const payload = getFormData();
 
     try {
       await addDoc(collection(db, "observation_templates"), {
@@ -327,57 +369,49 @@
       document.getElementById('templateName').value = '';
       alert(`შაბლონი „${name}“ წარმატებით შენახულია!`);
     } catch (err) {
-      console.error(err);
       alert("შენახვის შეცდომა: " + err.message);
     }
   };
 
-  // 100% უსაფრთხო ვერსია — არანაირი nested array
-  function getFormDataSafe() {
-    // მედიკამენტები
+  function getFormData() {
+    // meds – array of objects (OK for Firestore)
+    const rows = document.querySelectorAll('#meds tr:not(:first-child)');
     const meds = [];
-    document.querySelectorAll('#meds tr:not(:first-child)').forEach(row => {
+    rows.forEach(row => {
       const drug = row.cells[1].querySelector('input').value.trim();
       const doses = [];
       row.querySelectorAll('.dose input').forEach(inp => doses.push(inp.value.trim()));
-      meds.push({ drug, doses });
+      meds.push({ drug, doses });   // array of objects, each has an array – ეს ნებადართულია
     });
 
-    // ვიტალები — გავაკეთოთ სტრიქონები
-    const vitals = [];
-    document.querySelectorAll('#vitals tr:not(:first-child)').forEach(row => {
-      const rowData = [];
-      row.querySelectorAll('input').forEach(inp => rowData.push(inp.value.trim()));
-      vitals.push(rowData.join(',')); // ← სტრიქონი, არა მასივი!
-    });
+    // vitals – array of objects {values:[...]} (არა array-of-arrays)
+    const vitals = Array.from(document.querySelectorAll('#vitals tr:not(:first-child)')).map(row => ({
+      values: Array.from(row.querySelectorAll('input')).map(i => i.value.trim())
+    }));
 
-    // სხვა
-    const other = [];
-    document.querySelectorAll('#other tr:not(:first-child)').forEach(row => {
-      const rowData = [];
-      row.querySelectorAll('input').forEach(inp => rowData.push(inp.value.trim()));
-      other.push(rowData.join(','));
-    });
+    // enteral – უბრალო მასივი
+    const enteral = Array.from(document.querySelectorAll('#enteral input')).map(i => i.value.trim());
 
-    // ენტერალური
-    const enteral = [];
-    document.querySelectorAll('#enteral input').forEach(inp => enteral.push(inp.value.trim()));
+    // other – ასევე array of objects {values:[...]}
+    const other = Array.from(document.querySelectorAll('#other tr:not(:first-child)')).map(row => ({
+      values: Array.from(row.querySelectorAll('input')).map(i => i.value.trim())
+    }));
 
     return {
       info: {
-        fullName: document.getElementById('fullName').value.trim(),
-        hist: document.getElementById('hist').value.trim(),
+        fullName: document.getElementById('fullName').value,
+        hist: document.getElementById('hist').value,
         gender: document.getElementById('gender').value,
         age: document.getElementById('age').value,
         admission: document.getElementById('admission').value,
         today: document.getElementById('today').value,
-        icd: document.getElementById('icd').value.trim(),
-        dept: document.getElementById('dept').value.trim()
+        icd: document.getElementById('icd').value,
+        dept: document.getElementById('dept').value
       },
-      meds: meds,
-      vitals: vitals,
-      enteral: enteral,
-      other: other
+      meds,
+      vitals,
+      enteral,
+      other
     };
   }
 
@@ -395,37 +429,34 @@
 
     // meds
     document.querySelectorAll('#meds tr:not(:first-child)').forEach((row, i) => {
-      if (data.meds?.[i]) {
-        row.cells[1].querySelector('input').value = data.meds[i].drug || '';
-        row.querySelectorAll('.dose input').forEach((inp, j) => {
-          inp.value = data.meds[i].doses?.[j] || '';
-        });
-      }
+      const m = data.meds?.[i];
+      row.cells[1].querySelector('input').value = m?.drug || '';
+      row.querySelectorAll('.dose input').forEach((inp, j) => {
+        inp.value = m?.doses?.[j] || '';
+      });
     });
 
-    // vitals
+    // vitals – ვუჭერთ მხარს როგორც ახალ, ისე ძველ ფორმატს
     document.querySelectorAll('#vitals tr:not(:first-child)').forEach((row, i) => {
-      if (data.vitals?.[i]) {
-        const values = data.vitals[i].split(',');
-        row.querySelectorAll('input').forEach((inp, j) => {
-          inp.value = values[j] || '';
-        });
-      }
-    });
-
-    // other
-    document.querySelectorAll('#other tr:not(:first-child)').forEach((row, i) => {
-      if (data.other?.[i]) {
-        const values = data.other[i].split(',');
-        row.querySelectorAll('input').forEach((inp, j) => {
-          inp.value = values[j] || '';
-        });
-      }
+      const rowData = data.vitals?.[i];
+      const vals = Array.isArray(rowData) ? rowData : rowData?.values;
+      row.querySelectorAll('input').forEach((inp, j) => {
+        inp.value = vals?.[j] || '';
+      });
     });
 
     // enteral
     document.querySelectorAll('#enteral input').forEach((inp, i) => {
       inp.value = data.enteral?.[i] || '';
+    });
+
+    // other – იგივე ლოგიკა, როგორც vitals
+    document.querySelectorAll('#other tr:not(:first-child)').forEach((row, i) => {
+      const rowData = data.other?.[i];
+      const vals = Array.isArray(rowData) ? rowData : rowData?.values;
+      row.querySelectorAll('input').forEach((inp, j) => {
+        inp.value = vals?.[j] || '';
+      });
     });
   }
 

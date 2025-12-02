@@ -3,7 +3,7 @@
 <meta charset="UTF-8">
 <title>დაკვირვების ფურცელი</title>
 
-<!-- საიტის ლოგო / favicon (ფაილი: priscription.png უნდა იდოს index.html-ის გვერდით) -->
+<!-- FAVICON – priscription.png უნდა იდოს ამ ფაილთან იმავე საქაღალდეში -->
 <link rel="icon" type="image/png" href="priscription.png">
 <link rel="shortcut icon" type="image/png" href="priscription.png">
 
@@ -12,30 +12,95 @@
   .c { max-width:297mm; margin:auto; background:white; border-radius:8px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.1); }
   .header { background:#1e40af; color:white; padding:3px; text-align:center; font-size:9pt; line-height:1.2; }
   .header b { font-size:10pt; }
-  .pname { font-size:12pt; font-weight:bold; color:#1e40af; text-align:center; padding:3px; background:#eef2ff; border-bottom:2px solid #3b82f6; margin:2px 0; }
-  .nav { padding:6px; text-align:center; background:#f1f5f9; font-size:13px; display:flex; flex-wrap:wrap; gap:6px; justify-content:center; align-items:center; }
+
+  .pname { font-size:12pt; font-weight:bold; color:#1e40af; text-align:center; padding:3პx; background:#eef2ff; border-bottom:2px solid #3b82f6; margin:2px 0; }
+
+  .nav {
+    padding:6px;
+    text-align:center;
+    background:#f1f5f9;
+    font-size:13px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    justify-content:center;
+    align-items:center;
+  }
   .btn { padding:5px 12px; border:none; background:#2563eb; color:white; border-radius:4px; cursor:pointer; font-size:12px; }
   .btn.print { background:#059669; }
   .btn.clear { background:#dc2626; }
   .btn.delete { background:#991b1b; }
   .btn.active { background:#1e40af; }
   .btn.disabled { background:#94a3b8 !important; cursor:not-allowed !important; opacity:0.7; }
+
   .page { display:none; padding:4px 6px; }
   .page.active { display:block; }
-  .info { display:grid; grid-template-columns:repeat(4,1fr); gap:3px 6px; font-size:7.5pt; margin-bottom:4px; }
-  .info div { display:flex; flex-direction:column; }
-  .info label { font-weight:600; margin-bottom:1px; }
-  .info input, .info select { padding:2px 4px; border:1px solid #999; border-radius:3px; font-size:7.5pt; }
+
+  /* Info ბლოკი – 4 სვეტი, თითო უჯრაში label და value ერთ ხაზზე */
+  .info {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:3px 6px;
+    font-size:7.5pt;
+    margin-bottom:4px;
+  }
+  .info div {
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:3px;
+  }
+  .info label {
+    font-weight:600;
+    margin-bottom:0;
+    white-space:nowrap;
+  }
+  .info input,
+  .info select {
+    padding:2px 4px;
+    border:1px solid #999;
+    border-radius:3px;
+    font-size:7.5pt;
+    flex:1;
+  }
+
   table { width:100%; border-collapse:collapse; font-size:7.3pt; margin-top:4px; table-layout:fixed; }
   th, td { border:1px solid #555; padding:2px 1px; text-align:center; }
   th { background:#dbeafe; font-weight:700; color:#1e40af; }
-  .time { writing-mode:vertical-lr; text-orientation:mixed; font-size:6.7pt; width:16px; }
+
+  /* დრო – ჰორიზონტალური ციფრები */
+  .time {
+    font-size:7pt;
+    width:20px;
+    writing-mode:horizontal-tb;
+    text-orientation:mixed;
+  }
+
   .num { width:24px !important; background:#e0e7ff; font-weight:bold; color:#1e40af; font-size:7.3pt; }
   .drug { width:108px !important; text-align:left !important; background:#f8fafc; padding-left:5px; font-size:7.2pt; }
-  .drug input { width:100% !important; border:none !important; background:transparent !important; font-size:7.2pt; padding:1px 3px; box-sizing:border-box; }
-  .dose input { width:100% !important; border:none !important; text-align:center; font-size:7.3pt; padding:0; }
+  .drug input {
+    width:100% !important;
+    border:none !important;
+    background:transparent !important;
+    font-size:7.2pt;
+    padding:1px 3px;
+    box-sizing:border-box;
+  }
+  .dose input {
+    width:100% !important;
+    border:none !important;
+    text-align:center;
+    font-size:7.3pt;
+    padding:0;
+  }
+
   .sign { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:60px; font-size:11pt; }
   .line { border-bottom:2px solid #000; height:40px; }
+
+  /* პატარა ექიმის ხელმოწერა პირველი გვერდის ბოლოს */
+  .sign-small { margin-top:10px; display:flex; justify-content:flex-end; font-size:9pt; }
+  .line-small { width:160px; border-bottom:1px solid #000; height:14px; margin-bottom:2px; }
+
   #templateName { width:150px; padding:5px; font-size:12px; }
 
   #firebaseStatus {
@@ -64,12 +129,27 @@
   }
   #noTemplates { text-align:center; color:#888; padding:30px; font-size:15px; }
 
+  /* მონიშნული უჯრედები (Excel სტილში) */
+  input.selected-cell {
+    background:#fee2e2 !important;
+  }
+
   @media print {
     @page { size: A4 landscape; margin:5mm !important; }
     body, .c { margin:0 !important; padding:0 !important; background:white !important; }
     .nav, #templateModal, #firebaseStatus { display:none !important; }
     .page { display:block !important; page-break-after:always; padding:5mm !important; }
     input, select { border:none !important; background:transparent !important; }
+
+    /* select-ის ისრების მოცილება საბეჭდზე */
+    select {
+      -webkit-appearance:none !important;
+      -moz-appearance:none !important;
+      appearance:none !important;
+      background-image:none !important;
+      padding-right:0 !important;
+    }
+
     th, td { border:1px solid black !important; font-size:6.4pt !important; padding:1px !important; }
     .time { font-size:6pt !important; }
     .drug input, .dose input { font-size:6.3pt !important; }
@@ -96,21 +176,82 @@
     <button class="btn clear" onclick="clearAll()">გასუფთავება</button>
   </div>
 
+  <!-- გვერდი 1 -->
   <div class="page active" id="p1">
-    <div class="pname" id="name1">პაციენტის სახელი და გვარი</div>
+    <!-- აქ აღარ არის pname ზედა სათაური, როგორც სთხოვე -->
     <div class="info">
-      <div><label>პაციენტი</label><input type="text" id="fullName" oninput="updName()"></div>
-      <div><label>ისტ.№</label><input type="text" id="hist"></div>
-      <div><label>სქესი</label><select id="gender"><option>-</option><option>მამრ.</option><option>მდედრ.</option></select></div>
-      <div><label>ასაკი</label><input type="number" id="age"></div>
-      <div><label>შემოსვლა</label><input type="date" id="admission"></div>
-      <div><label>თარიღი</label><input type="date" id="today"></div>
-      <div><label>ICD-10</label><input type="text" id="icd"></div>
-      <div><label>განყ.</label><input type="text" id="dept"></div>
+      <div>
+        <label>პაციენტი:</label>
+        <input type="text" id="fullName" oninput="updName()">
+      </div>
+      <div>
+        <label>ისტ.№:</label>
+        <input type="text" id="hist">
+      </div>
+      <div>
+        <label>სქესი:</label>
+        <select id="gender">
+          <option>-</option>
+          <option>მამრ.</option>
+          <option>მდედრ.</option>
+        </select>
+      </div>
+      <div>
+        <label>ასაკი:</label>
+        <input type="number" id="age">
+      </div>
+      <div>
+        <label>შემოსვლა:</label>
+        <input type="date" id="admission">
+      </div>
+      <div>
+        <label>თარიღი:</label>
+        <input type="date" id="today">
+      </div>
+      <div>
+        <label>ICD-10:</label>
+        <input type="text" id="icd">
+      </div>
+      <div>
+        <label>განყ.:</label>
+        <input type="text" id="dept">
+      </div>
+      <div>
+        <label>ჯგ./რეზუსი:</label>
+        <select id="blood">
+          <option value="">-</option>
+          <option value="O(I) Rh+">O(I) Rh+</option>
+          <option value="O(I) Rh-">O(I) Rh-</option>
+          <option value="A(II) Rh+">A(II) Rh+</option>
+          <option value="A(II) Rh-">A(II) Rh-</option>
+          <option value="B(III) Rh+">B(III) Rh+</option>
+          <option value="B(III) Rh-">B(III) Rh-</option>
+          <option value="AB(IV) Rh+">AB(IV) Rh+</option>
+          <option value="AB(IV) Rh-">AB(IV) Rh-</option>
+        </select>
+      </div>
+      <div>
+        <label>პალატის №:</label>
+        <input type="text" id="room">
+      </div>
+      <div>
+        <label>ალერგია:</label>
+        <input type="text" id="allergy">
+      </div>
     </div>
+
     <table id="meds"></table>
+
+    <!-- ექიმის პატარა ხელმოწერა პირველი გვერდის ბოლოს -->
+    <div class="sign-small">
+      <div>
+        <div class="line-small"></div>
+        <div>ექიმის ხელმოწერა</div>
+      </div>
+    </div>
   </div>
 
+  <!-- გვერდი 2 -->
   <div class="page" id="p2">
     <div class="pname" id="name2">პაციენტის სახელი და გვარი</div>
     <table id="vitals"></table>
@@ -123,6 +264,7 @@
   </div>
 </div>
 
+<!-- შაბლონების მოდალი -->
 <div id="templateModal">
   <div>
     <div class="head">შაბლონები <span class="close" onclick="closeModal()">X</span></div>
@@ -138,7 +280,18 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, orderBy, query, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    doc,
+    deleteDoc,
+    orderBy,
+    query,
+    serverTimestamp,
+    getDoc
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDaegs8ugmDIJ5zLn9SYDU7vKA653TUtKQ",
@@ -188,13 +341,13 @@
   window.addEventListener('offline', () => updateFirebaseStatus(false));
   checkFirebaseConnection();
 
-  // საათობრივი ბადე – უცვლელად
+  // საათობრივი ბადე
   const HOURS = [...Array(16).keys()].map(i => i + 9).concat([...Array(9).keys()].map(i => i + 1));
 
   function updName() {
     const name = document.getElementById('fullName').value.trim() || 'პაციენტის სახელი და გვარი';
-    document.getElementById('name1').textContent = name;
-    document.getElementById('name2').textContent = name;
+    const n2 = document.getElementById('name2');
+    if (n2) n2.textContent = name;
   }
   window.updName = updName;
 
@@ -252,34 +405,121 @@
     });
   });
 
-  // კლავიატურით მოძრაობა
+  // ---- მრავალუჯრედიანი მონიშვნა (Excel სტილი) ----
+  let isSelecting = false;
+  let selectedInputs = new Set();
+
+  function clearSelection() {
+    selectedInputs.forEach(inp => inp.classList.remove('selected-cell'));
+    selectedInputs.clear();
+  }
+
+  function addToSelection(input) {
+    selectedInputs.add(input);
+    input.classList.add('selected-cell');
+  }
+
+  function startSelection(e) {
+    if (e.button !== 0) return; // მხოლოდ მარცხენა კლიკი
+    clearSelection();
+    isSelecting = true;
+    addToSelection(this);
+  }
+
+  function mouseEnterDuringSelection() {
+    if (!isSelecting) return;
+    addToSelection(this);
+  }
+
+  function attachSelectionHandlers() {
+    document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]').forEach(inp => {
+      inp.addEventListener('mousedown', startSelection);
+      inp.addEventListener('mouseenter', mouseEnterDuringSelection);
+    });
+  }
+
+  document.addEventListener('mouseup', () => {
+    isSelecting = false;
+  });
+
+  // კლავიატურის ნავიგაცია + Delete/Backspace ჯგუფური გასუფთავებისთვის
   document.addEventListener('keydown', function(e) {
-    if (document.activeElement.tagName !== 'INPUT') return;
+    const el = e.target;
+    const isInput = el instanceof HTMLInputElement;
+
+    // Delete / Backspace – გაწმინდე მონიშნული უჯრები ერთდროულად
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedInputs.size > 0) {
+      e.preventDefault();
+      selectedInputs.forEach(inp => inp.value = '');
+      clearSelection();
+      return;
+    }
+
+    if (!isInput) return;
     if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) return;
 
-    const inputs = Array.from(document.querySelectorAll('input[type=text], input[type=number], input[type=date]'));
-    const idx = inputs.indexOf(document.activeElement);
+    const cell = el.closest('td,th');
+    const table = cell?.closest('table');
 
-    if (e.key === 'Enter' || e.key === 'ArrowRight') {
+    // info ბლოკში – სტანდარტული ქცევა, მხოლოდ ცხრილებში ვაკონტროლებთ
+    if (!cell || !table) return;
+
+    const key = e.key;
+
+    const inputsInTable = Array.from(
+      table.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]')
+    );
+    const idx = inputsInTable.indexOf(el);
+
+    if (key === 'ArrowRight' || key === 'Enter') {
       e.preventDefault();
-      if (idx < inputs.length - 1) inputs[idx + 1].focus();
+      if (idx < inputsInTable.length - 1) {
+        inputsInTable[idx + 1].focus();
+      }
+      return;
     }
-    if (e.key === 'ArrowLeft' && idx > 0) {
+
+    if (key === 'ArrowLeft') {
       e.preventDefault();
-      inputs[idx - 1].focus();
+      if (idx > 0) {
+        inputsInTable[idx - 1].focus();
+      }
+      return;
     }
-    if (e.key === 'ArrowDown') {
+
+    const row = cell.parentElement;
+    const rows = Array.from(table.rows);
+    const rowIndex = rows.indexOf(row);
+    const cells = Array.from(row.cells);
+    const cellIndex = cells.indexOf(cell);
+
+    if (key === 'ArrowDown') {
       e.preventDefault();
-      const next = idx + HOURS.length + 1;
-      if (next < inputs.length) inputs[next].focus();
+      if (rowIndex < rows.length - 1) {
+        const nextRow = rows[rowIndex + 1];
+        const targetCell = nextRow.cells[cellIndex] || nextRow.cells[nextRow.cells.length - 1];
+        const targetInput = targetCell.querySelector('input');
+        if (targetInput) targetInput.focus();
+      }
+      return;
     }
-    if (e.key === 'ArrowUp') {
+
+    if (key === 'ArrowUp') {
       e.preventDefault();
-      const prev = idx - (HOURS.length + 1);
-      if (prev >= 0) inputs[prev].focus();
+      if (rowIndex > 0) {
+        const prevRow = rows[rowIndex - 1];
+        const targetCell = prevRow.cells[cellIndex] || prevRow.cells[prevRow.cells.length - 1];
+        const targetInput = targetCell.querySelector('input');
+        if (targetInput) targetInput.focus();
+      }
+      return;
     }
   });
 
+  // ჰენდლერების მიერთება (ცხრილების აგების შემდეგ!)
+  attachSelectionHandlers();
+
+  // --- შაბლონები Firebase-დან ---
   function openTemplateModal() {
     if (templatesBtn.classList.contains('disabled')) {
       alert("ინტერნეტი არ არის — შაბლონები მიუწვდომელია");
@@ -379,7 +619,7 @@
   };
 
   function getFormData() {
-    // meds – array of objects (OK for Firestore)
+    // meds
     const rows = document.querySelectorAll('#meds tr:not(:first-child)');
     const meds = [];
     rows.forEach(row => {
@@ -389,15 +629,15 @@
       meds.push({ drug, doses });
     });
 
-    // vitals – array of objects {values:[...]}
+    // vitals
     const vitals = Array.from(document.querySelectorAll('#vitals tr:not(:first-child)')).map(row => ({
       values: Array.from(row.querySelectorAll('input')).map(i => i.value.trim())
     }));
 
-    // enteral – უბრალო მასივი
+    // enteral
     const enteral = Array.from(document.querySelectorAll('#enteral input')).map(i => i.value.trim());
 
-    // other – array of objects {values:[...]}
+    // other
     const other = Array.from(document.querySelectorAll('#other tr:not(:first-child)')).map(row => ({
       values: Array.from(row.querySelectorAll('input')).map(i => i.value.trim())
     }));
@@ -411,7 +651,10 @@
         admission: document.getElementById('admission').value,
         today: document.getElementById('today').value,
         icd: document.getElementById('icd').value,
-        dept: document.getElementById('dept').value
+        dept: document.getElementById('dept').value,
+        blood: document.getElementById('blood').value,
+        room: document.getElementById('room').value,
+        allergy: document.getElementById('allergy').value
       },
       meds,
       vitals,
@@ -430,6 +673,9 @@
     document.getElementById('today').value = data.info?.today || '';
     document.getElementById('icd').value = data.info?.icd || '';
     document.getElementById('dept').value = data.info?.dept || '';
+    document.getElementById('blood').value = data.info?.blood || '';
+    document.getElementById('room').value = data.info?.room || '';
+    document.getElementById('allergy').value = data.info?.allergy || '';
     updName();
 
     // meds
@@ -455,7 +701,7 @@
       inp.value = data.enteral?.[i] || '';
     });
 
-    // other – იგივე ლოგიკა, როგორც vitals
+    // other
     document.querySelectorAll('#other tr:not(:first-child)').forEach((row, i) => {
       const rowData = data.other?.[i];
       const vals = Array.isArray(rowData) ? rowData : rowData?.values;
@@ -463,6 +709,8 @@
         inp.value = vals?.[j] || '';
       });
     });
+
+    attachSelectionHandlers();
   }
 
   window.clearAll = function() {
@@ -479,6 +727,7 @@
     rows[32].querySelector('.drug input').value = 'insulini';
     rows[33].querySelector('.drug input').value = 'შაქრის კონტროლი';
 
+    clearSelection();
     updName();
   };
 </script>

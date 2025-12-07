@@ -13,7 +13,7 @@
   .header { background:#1e40af; color:white; padding:3px; text-align:center; font-size:9pt; line-height:1.2; }
   .header b { font-size:10pt; }
 
-  .pname { font-size:12pt; font-weight:bold; color:#1e40af; text-align:center; padding:3პx; background:#eef2ff; border-bottom:2px solid #3b82f6; margin:2px 0; }
+  .pname { font-size:12pt; font-weight:bold; color:#1e40af; text-align:center; padding:3px; background:#eef2ff; border-bottom:2px solid #3b82f6; margin:2px 0; }
 
   .nav {
     padding:6px;
@@ -178,7 +178,7 @@
 
   <!-- გვერდი 1 -->
   <div class="page active" id="p1">
-    <!-- აქ აღარ არის pname ზედა სათაური, როგორც სთხოვე -->
+    <!-- საპასპორტო მონაცემები (info) – შაბლონში აღარ ინახება -->
     <div class="info">
       <div>
         <label>პაციენტი:</label>
@@ -408,6 +408,7 @@
   // ---- მრავალუჯრედიანი მონიშვნა (Excel სტილი) ----
   let isSelecting = false;
   let selectedInputs = new Set();
+  let lastFocusedInput = null;
 
   function clearSelection() {
     selectedInputs.forEach(inp => inp.classList.remove('selected-cell'));
@@ -419,8 +420,74 @@
     input.classList.add('selected-cell');
   }
 
+  function removeFromSelection(input) {
+    selectedInputs.delete(input);
+    input.classList.remove('selected-cell');
+  }
+
+  function toggleSelection(input) {
+    if (selectedInputs.has(input)) {
+      removeFromSelection(input);
+    } else {
+      addToSelection(input);
+    }
+  }
+
+  function getCellPosition(input) {
+    const cell = input.closest('td,th');
+    const row = cell?.parentElement;
+    const table = row?.closest('table');
+    if (!cell || !row || !table) return null;
+    const rows = Array.from(table.rows);
+    const rowIndex = rows.indexOf(row);
+    const cells = Array.from(row.cells);
+    const cellIndex = cells.indexOf(cell);
+    return { table, rowIndex, cellIndex };
+  }
+
+  function selectRange(fromInput, toInput) {
+    const fromPos = getCellPosition(fromInput);
+    const toPos = getCellPosition(toInput);
+    if (!fromPos || !toPos) return;
+    if (fromPos.table !== toPos.table) return;
+
+    const table = fromPos.table;
+    const rows = Array.from(table.rows);
+
+    const minRow = Math.min(fromPos.rowIndex, toPos.rowIndex);
+    const maxRow = Math.max(fromPos.rowIndex, toPos.rowIndex);
+    const minCol = Math.min(fromPos.cellIndex, toPos.cellIndex);
+    const maxCol = Math.max(fromPos.cellIndex, toPos.cellIndex);
+
+    clearSelection();
+
+    for (let r = minRow; r <= maxRow; r++) {
+      const row = rows[r];
+      for (let c = minCol; c <= maxCol; c++) {
+        const cell = row.cells[c];
+        if (!cell) continue;
+        const inp = cell.querySelector('input');
+        if (inp) addToSelection(inp);
+      }
+    }
+  }
+
   function startSelection(e) {
     if (e.button !== 0) return; // მხოლოდ მარცხენა კლიკი
+
+    // Ctrl/Cmd+Click -> toggle ერთი უჯრა
+    if (e.ctrlKey || e.metaKey) {
+      toggleSelection(this);
+      return;
+    }
+
+    // Shift+Click -> დიაპაზონი lastFocusedInput-დან აქამდე
+    if (e.shiftKey && lastFocusedInput && lastFocusedInput.isConnected) {
+      selectRange(lastFocusedInput, this);
+      return;
+    }
+
+    // ჩვეულებრივი click + drag – ახალი მონიშვნა
     clearSelection();
     isSelecting = true;
     addToSelection(this);
@@ -435,6 +502,9 @@
     document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]').forEach(inp => {
       inp.addEventListener('mousedown', startSelection);
       inp.addEventListener('mouseenter', mouseEnterDuringSelection);
+      inp.addEventListener('focus', () => {
+        lastFocusedInput = inp;
+      });
     });
   }
 
@@ -442,26 +512,133 @@
     isSelecting = false;
   });
 
-  // კლავიატურის ნავიგაცია + Delete/Backspace ჯგუფური გასუფთავებისთვის
+  // რამდენიმე უჯრის ერთად დაკოპირება
+  function copySelectedToClipboard() {
+    if (selectedInputs.size === 0) return;
+    const arr = Array.from(selectedInputs).filter(inp => inp.isConnected);
+    if (arr.length === 0) return;
+
+    const firstPos = getCellPosition(arr[0]);
+    if (!firstPos) return;
+
+    // მხოლოდ იგივე ცხრილიდან
+    const positions = arr
+      .map(inp => {
+        const pos = getCellPosition(inp);
+        return pos && pos.table === firstPos.table ? { input: inp, ...pos } : null;
+      })
+      .filter(Boolean);
+
+    if (!positions.length) return;
+
+    const minRow = Math.min(...positions.map(p => p.rowIndex));
+    const maxRow = Math.max(...positions.map(p => p.rowIndex));
+    const minCol = Math.min(...positions.map(p => p.cellIndex));
+    const maxCol = Math.max(...positions.map(p => p.cellIndex));
+
+    const rowsOut = [];
+    for (let r = minRow; r <= maxRow; r++) {
+      const colsOut = [];
+      for (let c = minCol; c <= maxCol; c++) {
+        const match = positions.find(p => p.rowIndex === r && p.cellIndex === c);
+        colsOut.push(match ? match.input.value : '');
+      }
+      rowsOut.push(colsOut.join('\t'));
+    }
+    const text = rowsOut.join('\n');
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  }
+
+  // რამდენიმე უჯრაში ჩაფეისთება
+  function pasteTextGrid(text, startInput) {
+    const pos = getCellPosition(startInput);
+    if (!pos) {
+      startInput.value = text;
+      return;
+    }
+    const { table, rowIndex, cellIndex } = pos;
+    const tblRows = Array.from(table.rows);
+    const lines = text.replace(/\r/g, '').split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const cols = lines[i].split('\t');
+      const targetRowIndex = rowIndex + i;
+      if (targetRowIndex >= tblRows.length) break;
+      const row = tblRows[targetRowIndex];
+      for (let j = 0; j < cols.length; j++) {
+        const targetCellIndex = cellIndex + j;
+        if (targetCellIndex >= row.cells.length) break;
+        const cell = row.cells[targetCellIndex];
+        const inp = cell.querySelector('input');
+        if (inp) inp.value = cols[j];
+      }
+    }
+  }
+
+  // Ctrl/Cmd + V – თუ ტექსტი შეიცავს \n ან \t, ჩავთვალოთ, რომ grid-ს ვყრით
+  document.addEventListener('paste', function(e) {
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!e.clipboardData) return;
+
+    const text = e.clipboardData.getData('text');
+    if (text.includes('\n') || text.includes('\t')) {
+      e.preventDefault();
+      pasteTextGrid(text, target);
+    }
+  });
+
+  // კლავიატურის ნავიგაცია + Shortcut-ები
   document.addEventListener('keydown', function(e) {
     const el = e.target;
     const isInput = el instanceof HTMLInputElement;
 
-    // Delete / Backspace – გაწმინდე მონიშნული უჯრები ერთდროულად
-    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedInputs.size > 0) {
-      e.preventDefault();
-      selectedInputs.forEach(inp => inp.value = '');
-      clearSelection();
+    // Cmd/Ctrl + C – თუ გვაქვს მონიშნული უჯრები, დავაკოპიროთ ისინი (Excel სტილში)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+      if (selectedInputs.size > 0) {
+        e.preventDefault();
+        copySelectedToClipboard();
+      }
       return;
     }
+
+    // Cmd/Ctrl + A – მონიშნოს მთელი ცხრილი
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && isInput) {
+      const cell = el.closest('td,th');
+      const table = cell?.closest('table');
+      if (table) {
+        e.preventDefault();
+        clearSelection();
+        const inputs = table.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]');
+        inputs.forEach(inp => addToSelection(inp));
+      }
+      return;
+    }
+
+    // Delete – ჯგუფური გასუფთავება მხოლოდ მონიშნულ უჯრებზე (მონიშვნა რჩება)
+    if (e.key === 'Delete' && selectedInputs.size > 0) {
+      e.preventDefault();
+      selectedInputs.forEach(inp => inp.value = '');
+      return;
+    }
+
+    // Backspace ნორმალურად მუშაობს, არაფერს ვუზღუდავთ
 
     if (!isInput) return;
     if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) return;
 
     const cell = el.closest('td,th');
     const table = cell?.closest('table');
-
-    // info ბლოკში – სტანდარტული ქცევა, მხოლოდ ცხრილებში ვაკონტროლებთ
     if (!cell || !table) return;
 
     const key = e.key;
@@ -471,7 +648,25 @@
     );
     const idx = inputsInTable.indexOf(el);
 
-    if (key === 'ArrowRight' || key === 'Enter') {
+    // Enter → ქვემოთ (ArrowDown-ის სტილში)
+    if (key === 'Enter') {
+      e.preventDefault();
+      const row = cell.parentElement;
+      const rows = Array.from(table.rows);
+      const rowIndex = rows.indexOf(row);
+      const cells = Array.from(row.cells);
+      const cellIndex = cells.indexOf(cell);
+
+      if (rowIndex < rows.length - 1) {
+        const nextRow = rows[rowIndex + 1];
+        const targetCell = nextRow.cells[cellIndex] || nextRow.cells[nextRow.cells.length - 1];
+        const targetInput = targetCell.querySelector('input');
+        if (targetInput) targetInput.focus();
+      }
+      return;
+    }
+
+    if (key === 'ArrowRight') {
       e.preventDefault();
       if (idx < inputsInTable.length - 1) {
         inputsInTable[idx + 1].focus();
@@ -603,7 +798,7 @@
       return;
     }
 
-    const payload = getFormData();
+    const payload = getFormData(); // შეიცავს მხოლოდ meds / vitals / enteral / other
 
     try {
       await addDoc(collection(db, "observation_templates"), {
@@ -618,6 +813,7 @@
     }
   };
 
+  // შაბლონში ვინახავთ მხოლოდ მედიკამენტებს და ფიზიკალურ მონაცემებს
   function getFormData() {
     // meds
     const rows = document.querySelectorAll('#meds tr:not(:first-child)');
@@ -643,19 +839,6 @@
     }));
 
     return {
-      info: {
-        fullName: document.getElementById('fullName').value,
-        hist: document.getElementById('hist').value,
-        gender: document.getElementById('gender').value,
-        age: document.getElementById('age').value,
-        admission: document.getElementById('admission').value,
-        today: document.getElementById('today').value,
-        icd: document.getElementById('icd').value,
-        dept: document.getElementById('dept').value,
-        blood: document.getElementById('blood').value,
-        room: document.getElementById('room').value,
-        allergy: document.getElementById('allergy').value
-      },
       meds,
       vitals,
       enteral,
@@ -663,21 +846,8 @@
     };
   }
 
+  // შაბლონის ჩატვირთვისას არ ვეხებით info-ს — მხოლოდ ცხრილებს
   function applyFormData(data) {
-    // info
-    document.getElementById('fullName').value = data.info?.fullName || '';
-    document.getElementById('hist').value = data.info?.hist || '';
-    document.getElementById('gender').value = data.info?.gender || '-';
-    document.getElementById('age').value = data.info?.age || '';
-    document.getElementById('admission').value = data.info?.admission || '';
-    document.getElementById('today').value = data.info?.today || '';
-    document.getElementById('icd').value = data.info?.icd || '';
-    document.getElementById('dept').value = data.info?.dept || '';
-    document.getElementById('blood').value = data.info?.blood || '';
-    document.getElementById('room').value = data.info?.room || '';
-    document.getElementById('allergy').value = data.info?.allergy || '';
-    updName();
-
     // meds
     document.querySelectorAll('#meds tr:not(:first-child)').forEach((row, i) => {
       const m = data.meds?.[i];
@@ -687,7 +857,7 @@
       });
     });
 
-    // vitals – ვუჭერთ მხარს როგორც ახალ, ისე ძველ ფორმატს
+    // vitals – ვუჭერთ მხარს როგორც ახალ, ისე ძველ ფორმატს (array ან {values:[]})
     document.querySelectorAll('#vitals tr:not(:first-child)').forEach((row, i) => {
       const rowData = data.vitals?.[i];
       const vals = Array.isArray(rowData) ? rowData : rowData?.values;

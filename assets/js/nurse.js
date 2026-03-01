@@ -20,6 +20,14 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const liveSyncRef = doc(db, "observation_live", "current");
 const statusEl = document.getElementById('firebaseStatus');
+const EXCLUDED_MEDICATION_NAMES = new Set([
+  'ანტიბაქტერიული თერაპია',
+  'სედაცია',
+  'ბაზისური თერაპია',
+  'ვაზოპრესორი',
+  'insulini',
+  'შაქრის კონტროლი'
+]);
 
 const NURSE_ROW_COUNT = 24;
 const NURSE_LEFT_ITEMS = [
@@ -149,7 +157,9 @@ function applyLiveSyncPayload(payload) {
   document.getElementById('nurseFullName').value = passport.fullName || '';
   document.getElementById('nurseAdmissionDate').value = passport.admission || '';
 
-  const meds = (Array.isArray(payload.medications) ? payload.medications : []).map(extractMedicationName).filter(Boolean);
+  const meds = (Array.isArray(payload.medications) ? payload.medications : [])
+    .map(extractMedicationName)
+    .filter(name => name && !EXCLUDED_MEDICATION_NAMES.has(name));
   const nameInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input'));
   nameInputs.forEach((inp, idx) => {
     const current = inp.value.trim();

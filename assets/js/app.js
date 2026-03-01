@@ -31,6 +31,14 @@
   const saveBtn = document.getElementById('saveBtn');
   const liveSyncRef = doc(db, "observation_live", "current");
   const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
+  const EXCLUDED_MEDICATION_NAMES = new Set([
+    'ანტიბაქტერიული თერაპია',
+    'სედაცია',
+    'ბაზისური თერაპია',
+    'ვაზოპრესორი',
+    'insulini',
+    'შაქრის კონტროლი'
+  ]);
   let liveSyncTimer = null;
 
   function updateFirebaseStatus(connected) {
@@ -129,7 +137,7 @@
 
     const medications = Array.from(document.querySelectorAll('#meds tr:not(:first-child) .drug input'))
       .map(inp => inp.value.trim())
-      .filter(Boolean);
+      .filter(name => name && !EXCLUDED_MEDICATION_NAMES.has(name));
 
     return {
       passport,

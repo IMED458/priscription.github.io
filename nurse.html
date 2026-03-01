@@ -16,6 +16,9 @@
     <button class="btn" data-page="2">2</button>
     <button class="btn" id="syncBtn" onclick="syncFromObservation()">სინქრონიზაცია</button>
     <button class="btn print" onclick="window.print()">ბეჭდვა</button>
+    <input type="text" id="nurseTemplateName" placeholder="შაბლონის სახელი">
+    <button class="btn" id="nurseSaveBtn" onclick="saveNurseTemplate()">შენახვა</button>
+    <button class="btn" id="nurseTemplatesBtn" onclick="openNurseTemplateModal()" style="background:#7c3aed;">შაბლონები</button>
   </div>
 
   <div class="page active" id="p1">
@@ -31,6 +34,19 @@
 
   <div class="page" id="p2">
     <table id="nurseExpense2" class="nurse-sheet"></table>
+  </div>
+</div>
+
+<div id="nurseTemplateModal">
+  <div>
+    <div class="head">ექთნის შაბლონები <span class="close" onclick="closeNurseTemplateModal()">X</span></div>
+    <div class="body">
+      <div id="nurseTemplateItems"></div>
+      <div id="nurseNoTemplates">შაბლონები არ მოიძებნა</div>
+    </div>
+    <div style="padding:15px; background:#f8fafc; text-align:center;">
+      <button class="btn" style="background:#dc2626;" onclick="closeNurseTemplateModal()">დახურვა</button>
+    </div>
   </div>
 </div>
 

@@ -1,6 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
+  serverTimestamp,
   doc,
   getDoc,
   onSnapshot
@@ -20,6 +27,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const liveSyncRef = doc(db, "observation_live", "current");
 const statusEl = document.getElementById('firebaseStatus');
+const nurseTemplateNameEl = document.getElementById('nurseTemplateName');
+const nurseSaveBtn = document.getElementById('nurseSaveBtn');
+const nurseTemplatesBtn = document.getElementById('nurseTemplatesBtn');
 const EXCLUDED_MEDICATION_NAMES = new Set([
   'ანტიბაქტერიული თერაპია',
   'სედაცია',
@@ -81,33 +91,25 @@ function updateSyncStatus(mode) {
   if (mode === 'online') {
     statusEl.textContent = 'Firebase სინქი აქტიურია';
     statusEl.className = 'status-online';
+    nurseSaveBtn?.classList.remove('disabled');
+    nurseTemplatesBtn?.classList.remove('disabled');
     return;
   }
   if (mode === 'offline') {
     statusEl.textContent = 'Firestore მიუწვდომელია (local სინქი)';
     statusEl.className = 'status-offline';
+    nurseSaveBtn?.classList.add('disabled');
+    nurseTemplatesBtn?.classList.add('disabled');
     return;
   }
   statusEl.textContent = 'მიმდინარეობს სინქრონიზაცია...';
   statusEl.className = 'status-connecting';
+  nurseSaveBtn?.classList.add('disabled');
+  nurseTemplatesBtn?.classList.add('disabled');
 }
 
-function extractMedicationName(raw) {
-  const text = (raw || '').replace(/\s+/g, ' ').trim();
-  if (!text) return '';
-
-  const stopToken = /(\d|mg|ml|mcg|iu|g\/|%|x\b|i\/v|i\.v|i\/m|i\.m|p\/o|p\.o)/i;
-  const tokens = text.split(' ');
-  const out = [];
-  for (const t of tokens) {
-    if (out.length > 0 && stopToken.test(t)) break;
-    out.push(t);
-    if (out.length >= 5) break;
-  }
-  let name = out.join(' ').trim();
-  if (!name) name = text;
-  if (/^sol\.?/i.test(name) && !/[.!?]$/.test(name)) name += '.';
-  return name;
+function normalizeMedicationText(raw) {
+  return (raw || '').replace(/\s+/g, ' ').trim();
 }
 
 function buildNurseExpenseTable(tableId, leftItems, rightItems) {
@@ -128,12 +130,12 @@ function buildNurseExpenseTable(tableId, leftItems, rightItems) {
     const right = rightItems[idx] || '';
     html += `
       <tr>
-        <td class="n-name"><input class="n-name-input" type="text" value="${left}"></td>
+        <td class="n-name"><input class="n-name-input n-left" type="text" value="${left}"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
-        <td class="n-name"><input class="n-name-input" type="text" value="${right}"></td>
+        <td class="n-name"><input class="n-name-input n-right" type="text" value="${right}"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
@@ -158,9 +160,11 @@ function applyLiveSyncPayload(payload) {
   document.getElementById('nurseAdmissionDate').value = passport.admission || '';
 
   const meds = (Array.isArray(payload.medications) ? payload.medications : [])
-    .map(extractMedicationName)
+    .map(normalizeMedicationText)
     .filter(name => name && !EXCLUDED_MEDICATION_NAMES.has(name));
-  const nameInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input'));
+  const leftInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input.n-left'));
+  const rightInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input.n-right'));
+  const nameInputs = leftInputs.concat(rightInputs);
   nameInputs.forEach((inp, idx) => {
     const current = inp.value.trim();
     const oldSynced = lastSyncedMeds[idx] || '';
@@ -189,6 +193,127 @@ async function syncFromObservation() {
   }
 }
 window.syncFromObservation = syncFromObservation;
+
+function getNurseTemplatePayload() {
+  return {
+    header: {
+      historyNo: document.getElementById('nurseHistoryNo').value.trim(),
+      diagnosis: document.getElementById('nurseDiagnosis').value.trim(),
+      fullName: document.getElementById('nurseFullName').value.trim(),
+      admissionDate: document.getElementById('nurseAdmissionDate').value
+    },
+    names: Array.from(document.querySelectorAll('.n-name-input')).map(el => el.value.trim()),
+    qty: Array.from(document.querySelectorAll('.n-qty input')).map(el => el.value.trim())
+  };
+}
+
+function applyNurseTemplatePayload(data) {
+  if (!data) return;
+  if (data.header) {
+    document.getElementById('nurseHistoryNo').value = data.header.historyNo || '';
+    document.getElementById('nurseDiagnosis').value = data.header.diagnosis || '';
+    document.getElementById('nurseFullName').value = data.header.fullName || '';
+    document.getElementById('nurseAdmissionDate').value = data.header.admissionDate || '';
+  }
+  document.querySelectorAll('.n-name-input').forEach((el, i) => {
+    el.value = data.names?.[i] || '';
+  });
+  document.querySelectorAll('.n-qty input').forEach((el, i) => {
+    el.value = data.qty?.[i] || '';
+  });
+}
+
+window.openNurseTemplateModal = function() {
+  if (nurseTemplatesBtn?.classList.contains('disabled')) {
+    alert('ინტერნეტი არ არის — შაბლონები მიუწვდომელია');
+    return;
+  }
+  loadNurseTemplates();
+  document.getElementById('nurseTemplateModal').style.display = 'flex';
+};
+
+window.closeNurseTemplateModal = function() {
+  document.getElementById('nurseTemplateModal').style.display = 'none';
+};
+
+async function loadNurseTemplates() {
+  const items = document.getElementById('nurseTemplateItems');
+  const noTemplates = document.getElementById('nurseNoTemplates');
+  items.innerHTML = '';
+  try {
+    const qRef = query(collection(db, "nurse_templates"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(qRef);
+    if (snap.empty) {
+      noTemplates.style.display = 'block';
+      return;
+    }
+    noTemplates.style.display = 'none';
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      const div = document.createElement('div');
+      div.className = 'template-item';
+      div.innerHTML = `
+        <strong>${data.name}</strong>
+        <div>
+          <button class="btn" style="padding:6px 12px; font-size:12px; margin-left:8px;" onclick="loadNurseTemplateById('${docSnap.id}')">ჩატვირთვა</button>
+          <button class="btn" style="padding:6px 12px; font-size:12px; background:#991b1b;" onclick="deleteNurseTemplateById('${docSnap.id}', this)">წაშლა</button>
+        </div>
+      `;
+      items.appendChild(div);
+    });
+  } catch (err) {
+    alert('შაბლონების წამოღების შეცდომა: ' + err.message);
+  }
+}
+
+window.loadNurseTemplateById = async function(id) {
+  try {
+    const snap = await getDoc(doc(db, "nurse_templates", id));
+    if (snap.exists()) {
+      applyNurseTemplatePayload(snap.data().payload);
+      alert(`შაბლონი „${snap.data().name}“ ჩაიტვირთა!`);
+      window.closeNurseTemplateModal();
+    }
+  } catch (err) {
+    alert('ჩატვირთვის შეცდომა: ' + err.message);
+  }
+};
+
+window.deleteNurseTemplateById = async function(id, btn) {
+  if (!confirm('დარწმუნებული ხართ?')) return;
+  try {
+    await deleteDoc(doc(db, "nurse_templates", id));
+    btn.closest('.template-item')?.remove();
+    if (!document.getElementById('nurseTemplateItems').hasChildNodes()) {
+      document.getElementById('nurseNoTemplates').style.display = 'block';
+    }
+  } catch (err) {
+    alert('წაშლის შეცდომა: ' + err.message);
+  }
+};
+
+window.saveNurseTemplate = async function() {
+  if (nurseSaveBtn?.classList.contains('disabled')) {
+    alert('ინტერნეტი არ არის — შენახვა შეუძლებელია');
+    return;
+  }
+  const name = nurseTemplateNameEl?.value.trim();
+  if (!name) {
+    alert('შეიყვანეთ შაბლონის სახელი!');
+    return;
+  }
+  try {
+    await addDoc(collection(db, "nurse_templates"), {
+      name,
+      payload: getNurseTemplatePayload(),
+      createdAt: serverTimestamp()
+    });
+    if (nurseTemplateNameEl) nurseTemplateNameEl.value = '';
+    alert(`შაბლონი „${name}“ წარმატებით შენახულია!`);
+  } catch (err) {
+    alert('შენახვის შეცდომა: ' + err.message);
+  }
+};
 
 function readLocalSync() {
   try {

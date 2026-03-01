@@ -62,6 +62,9 @@ body {
 
 .btn.print { background: #059669; }
 .btn.active { background: #1e40af; }
+.btn.disabled { background:#94a3b8 !important; cursor:not-allowed !important; opacity:0.7; }
+
+#nurseTemplateName { width: 150px; padding: 5px; font-size: 12px; }
 
 .page { display: none; padding: 6mm 8mm; }
 .page.active { display: block; }
@@ -144,6 +147,40 @@ body {
   box-sizing: border-box;
 }
 
+#nurseTemplateModal {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  z-index:9999;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  box-sizing:border-box;
+}
+#nurseTemplateModal > div {
+  background:white;
+  width:90%;
+  max-width:520px;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+}
+#nurseTemplateModal .head { background:#1e40af; color:white; padding:14px 20px; font-size:17px; font-weight:bold; }
+#nurseTemplateModal .close { float:right; cursor:pointer; font-size:20px; }
+#nurseTemplateModal .body { padding:20px; max-height:65vh; overflow-y:auto; }
+.template-item {
+  padding:14px;
+  border-bottom:1px solid #eee;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#fafafa;
+  margin-bottom:8px;
+  border-radius:6px;
+}
+#nurseNoTemplates { text-align:center; color:#888; padding:30px; font-size:15px; }
+
 input.selected-cell {
   background: #fee2e2 !important;
 }
@@ -151,7 +188,7 @@ input.selected-cell {
 @media print {
   @page { size: A4 portrait; margin: 5mm !important; }
   body, .c { margin: 0 !important; padding: 0 !important; background: white !important; box-shadow: none !important; }
-  .nav, #firebaseStatus { display: none !important; }
+  .nav, #firebaseStatus, #nurseTemplateModal { display: none !important; }
   .page {
     display: block !important;
     page-break-after: always;

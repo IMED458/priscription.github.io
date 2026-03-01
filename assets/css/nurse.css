@@ -197,6 +197,9 @@ input.selected-cell {
     box-sizing: border-box;
     padding: 4mm 6mm;
   }
+  .page:last-child {
+    page-break-after: auto !important;
+  }
   input {
     border: none !important;
     background: transparent !important;

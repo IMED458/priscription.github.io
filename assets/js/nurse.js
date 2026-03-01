@@ -1,3 +1,26 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDaegs8ugmDIJ5zLn9SYDU7vKA653TUtKQ",
+  authDomain: "observation-templates.firebaseapp.com",
+  projectId: "observation-templates",
+  storageBucket: "observation-templates.firebasestorage.app",
+  messagingSenderId: "3715018818",
+  appId: "1:3715018818:web:fd49e4181ecf2ba202fddb",
+  measurementId: "G-1KMT8C3Q4E"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const liveSyncRef = doc(db, "observation_live", "current");
+const statusEl = document.getElementById('firebaseStatus');
+
 const NURSE_ROW_COUNT = 24;
 const NURSE_LEFT_ITEMS = [
   'არასტ.ხელთათმანი',
@@ -45,6 +68,22 @@ const NURSE_RIGHT_ITEMS = [
   '', '', '', '', '', '', '', ''
 ];
 
+function updateSyncStatus(mode) {
+  if (!statusEl) return;
+  if (mode === 'online') {
+    statusEl.textContent = 'Firebase სინქი აქტიურია';
+    statusEl.className = 'status-online';
+    return;
+  }
+  if (mode === 'offline') {
+    statusEl.textContent = 'Firestore მიუწვდომელია (local სინქი)';
+    statusEl.className = 'status-offline';
+    return;
+  }
+  statusEl.textContent = 'მიმდინარეობს სინქრონიზაცია...';
+  statusEl.className = 'status-connecting';
+}
+
 function buildNurseExpenseTable(tableId, leftItems, rightItems) {
   let html = `
     <colgroup>
@@ -81,6 +120,28 @@ function buildNurseExpenseTable(tableId, leftItems, rightItems) {
 
 buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
 buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
+
+function applyLiveSyncPayload(payload) {
+  if (!payload) return;
+  const passport = payload.passport || {};
+  document.getElementById('nurseHistoryNo').value = passport.hist || '';
+  document.getElementById('nurseDiagnosis').value = passport.icd || '';
+  document.getElementById('nurseAdmissionDate').value = passport.admission || '';
+
+  const meds = Array.isArray(payload.medications) ? payload.medications : [];
+  const nameCells = Array.from(document.querySelectorAll('#nurseExpense1 tr td.n-name'));
+  nameCells.forEach((cell, idx) => {
+    cell.textContent = meds[idx] || '';
+  });
+}
+
+function readLocalSync() {
+  try {
+    const raw = localStorage.getItem('observation_live_sync');
+    if (!raw) return;
+    applyLiveSyncPayload(JSON.parse(raw));
+  } catch (_) {}
+}
 
 document.querySelectorAll('[data-page]').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -184,3 +245,26 @@ function attachSelectionHandlers() {
 
 document.addEventListener('mouseup', () => { isSelecting = false; });
 attachSelectionHandlers();
+
+updateSyncStatus('connecting');
+readLocalSync();
+window.addEventListener('storage', (e) => {
+  if (e.key !== 'observation_live_sync' || !e.newValue) return;
+  try {
+    applyLiveSyncPayload(JSON.parse(e.newValue));
+  } catch (_) {}
+});
+
+onSnapshot(liveSyncRef, (snap) => {
+  if (snap.exists()) {
+    applyLiveSyncPayload(snap.data());
+    updateSyncStatus('online');
+  }
+}, async () => {
+  updateSyncStatus('offline');
+  try {
+    const fallback = await getDoc(liveSyncRef);
+    if (fallback.exists()) applyLiveSyncPayload(fallback.data());
+  } catch (_) {}
+  readLocalSync();
+});

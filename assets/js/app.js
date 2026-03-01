@@ -5,6 +5,7 @@
     addDoc,
     getDocs,
     doc,
+    setDoc,
     deleteDoc,
     orderBy,
     query,
@@ -28,6 +29,9 @@
   const statusEl = document.getElementById('firebaseStatus');
   const templatesBtn = document.getElementById('templatesBtn');
   const saveBtn = document.getElementById('saveBtn');
+  const liveSyncRef = doc(db, "observation_live", "current");
+  const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
+  let liveSyncTimer = null;
 
   function updateFirebaseStatus(connected) {
     if (connected) {
@@ -112,8 +116,53 @@
   });
   document.getElementById('other').innerHTML = othHTML;
 
+  function collectLiveSyncPayload() {
+    const passport = {};
+    PASSPORT_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      passport[id] = el ? (el.value ?? '').toString().trim() : '';
+    });
+
+    const medications = Array.from(document.querySelectorAll('#meds tr:not(:first-child) .drug input'))
+      .map(inp => inp.value.trim())
+      .filter(Boolean);
+
+    return {
+      passport,
+      medications,
+      updatedAtMs: Date.now()
+    };
+  }
+
+  async function pushLiveSyncNow() {
+    const payload = collectLiveSyncPayload();
+    try {
+      localStorage.setItem('observation_live_sync', JSON.stringify(payload));
+    } catch (_) {}
+    try {
+      await setDoc(liveSyncRef, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+    } catch (_) {}
+  }
+
+  function scheduleLiveSync() {
+    if (liveSyncTimer) clearTimeout(liveSyncTimer);
+    liveSyncTimer = setTimeout(pushLiveSyncNow, 300);
+  }
+
   document.getElementById('today').value = new Date().toISOString().split('T')[0];
   updName();
+  scheduleLiveSync();
+
+  PASSPORT_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', scheduleLiveSync);
+    el.addEventListener('change', scheduleLiveSync);
+  });
+  document.getElementById('meds').addEventListener('input', (e) => {
+    if (!e.target.matches('.drug input')) return;
+    scheduleLiveSync();
+  });
 
   // გვერდების გადართვა
   document.querySelectorAll('[data-page]').forEach(btn => {
@@ -601,6 +650,7 @@
     });
 
     attachSelectionHandlers();
+    scheduleLiveSync();
   }
 
   window.clearAll = function() {
@@ -619,5 +669,6 @@
 
     clearSelection();
     updName();
+    scheduleLiveSync();
   };
 </script>

@@ -5,6 +5,22 @@ body {
   background: #f0f9ff;
 }
 
+#firebaseStatus {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 9999;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  color: white;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.status-online { background: #16a34a; }
+.status-offline { background: #dc2626; }
+.status-connecting { background: #ea580c; }
+
 .c {
   max-width: 210mm;
   margin: auto;
@@ -124,7 +140,7 @@ input.selected-cell {
 @media print {
   @page { size: A4 portrait; margin: 5mm !important; }
   body, .c { margin: 0 !important; padding: 0 !important; background: white !important; box-shadow: none !important; }
-  .nav { display: none !important; }
+  .nav, #firebaseStatus { display: none !important; }
   .page {
     display: block !important;
     page-break-after: always;

@@ -112,6 +112,25 @@ function normalizeMedicationText(raw) {
   return (raw || '').replace(/\s+/g, ' ').trim();
 }
 
+function extractMedicationName(raw) {
+  const text = normalizeMedicationText(raw);
+  if (!text) return '';
+
+  const excludedNormalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
+  for (const ex of EXCLUDED_MEDICATION_NAMES) {
+    if (excludedNormalized === ex.toLowerCase()) return '';
+  }
+
+  const m = text.match(/^(sol\.?)\s+([^\s,;()]+)/i);
+  if (m) {
+    const sol = m[1].toLowerCase().startsWith('sol') ? 'Sol.' : m[1];
+    const drug = m[2].replace(/[.;,:]+$/g, '');
+    return `${sol} ${drug}.`;
+  }
+
+  return text.split(' ').slice(0, 2).join(' ');
+}
+
 function buildNurseExpenseTable(tableId, leftItems, rightItems) {
   let html = `
     <colgroup>
@@ -160,8 +179,8 @@ function applyLiveSyncPayload(payload) {
   document.getElementById('nurseAdmissionDate').value = passport.admission || '';
 
   const meds = (Array.isArray(payload.medications) ? payload.medications : [])
-    .map(normalizeMedicationText)
-    .filter(name => name && !EXCLUDED_MEDICATION_NAMES.has(name));
+    .map(extractMedicationName)
+    .filter(Boolean);
   const leftInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input.n-left'));
   const rightInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input.n-right'));
   const nameInputs = leftInputs.concat(rightInputs);
@@ -425,6 +444,56 @@ function attachSelectionHandlers() {
 
 document.addEventListener('mouseup', () => { isSelecting = false; });
 attachSelectionHandlers();
+
+document.addEventListener('keydown', function(e) {
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement)) return;
+  if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) return;
+
+  const cell = el.closest('td,th');
+  const table = cell?.closest('table');
+  if (!cell || !table) return;
+
+  const inputsInTable = Array.from(table.querySelectorAll('input[type="text"], input[type="date"]'));
+  const idx = inputsInTable.indexOf(el);
+
+  if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    if (idx < inputsInTable.length - 1) inputsInTable[idx + 1].focus();
+    return;
+  }
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (idx > 0) inputsInTable[idx - 1].focus();
+    return;
+  }
+
+  const row = cell.parentElement;
+  const rows = Array.from(table.rows);
+  const rowIndex = rows.indexOf(row);
+  const cells = Array.from(row.cells);
+  const cellIndex = cells.indexOf(cell);
+
+  const moveVertical = (delta) => {
+    const targetRowIndex = rowIndex + delta;
+    if (targetRowIndex < 0 || targetRowIndex >= rows.length) return;
+    const targetRow = rows[targetRowIndex];
+    const targetCell = targetRow.cells[cellIndex] || targetRow.cells[targetRow.cells.length - 1];
+    const targetInput = targetCell?.querySelector('input');
+    if (targetInput) targetInput.focus();
+  };
+
+  if (e.key === 'Enter' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    moveVertical(1);
+    return;
+  }
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    moveVertical(-1);
+  }
+});
 
 updateSyncStatus('connecting');
 readLocalSync();

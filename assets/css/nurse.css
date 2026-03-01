@@ -191,13 +191,15 @@ input.selected-cell {
   .nav, #firebaseStatus, #nurseTemplateModal { display: none !important; }
   .page {
     display: block !important;
+    break-after: page;
     page-break-after: always;
     width: 200mm;
-    min-height: 287mm;
+    min-height: auto;
     box-sizing: border-box;
     padding: 4mm 6mm;
   }
   .page:last-child {
+    break-after: auto !important;
     page-break-after: auto !important;
   }
   input {

@@ -198,6 +198,7 @@ function applyLiveSyncPayload(payload) {
   });
   lastSyncedMeds = meds.slice(0, nameInputs.length);
   hasObservationMedicationSync = meds.length > 0;
+  pushHistorySnapshot();
 }
 
 async function syncFromObservation() {
@@ -277,6 +278,7 @@ function applyNurseTemplatePayload(data, opts = {}) {
   qtyInputsPage2.forEach((el, i) => {
     el.value = qtyPage2?.[i] || '';
   });
+  pushHistorySnapshot();
 }
 
 window.openNurseTemplateModal = function() {
@@ -386,6 +388,7 @@ window.clearNurseAll = function() {
   document.querySelector('[data-page=\"1\"]')?.classList.add('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('p1')?.classList.add('active');
+  pushHistorySnapshot(true);
 };
 
 function readLocalSync() {
@@ -408,6 +411,57 @@ document.querySelectorAll('[data-page]').forEach(btn => {
 let isSelecting = false;
 let selectedInputs = new Set();
 let lastFocusedInput = null;
+let undoStack = [];
+let redoStack = [];
+let historyTimer = null;
+let applyingHistoryState = false;
+
+function getTrackedInputs() {
+  return Array.from(document.querySelectorAll('input[type="text"], input[type="date"]'));
+}
+
+function snapshotState() {
+  return getTrackedInputs().map(inp => inp.value);
+}
+
+function applySnapshot(values) {
+  const inputs = getTrackedInputs();
+  applyingHistoryState = true;
+  inputs.forEach((inp, i) => {
+    inp.value = values[i] || '';
+  });
+  applyingHistoryState = false;
+}
+
+function pushHistorySnapshot(force = false) {
+  if (applyingHistoryState) return;
+  const snap = snapshotState();
+  const last = undoStack[undoStack.length - 1];
+  if (!force && last && last.length === snap.length && last.every((v, i) => v === snap[i])) return;
+  undoStack.push(snap);
+  if (undoStack.length > 200) undoStack.shift();
+  redoStack = [];
+}
+
+function scheduleHistorySnapshot() {
+  if (historyTimer) clearTimeout(historyTimer);
+  historyTimer = setTimeout(() => pushHistorySnapshot(), 220);
+}
+
+function undoHistory() {
+  if (undoStack.length <= 1) return;
+  const current = undoStack.pop();
+  redoStack.push(current);
+  const prev = undoStack[undoStack.length - 1];
+  applySnapshot(prev);
+}
+
+function redoHistory() {
+  if (redoStack.length === 0) return;
+  const next = redoStack.pop();
+  undoStack.push(next);
+  applySnapshot(next);
+}
 
 function clearSelection() {
   selectedInputs.forEach(inp => inp.classList.remove('selected-cell'));
@@ -567,6 +621,7 @@ function pasteTextGrid(text, startInput) {
       if (inp) inp.value = cols[j];
     }
   }
+  pushHistorySnapshot();
 }
 
 document.addEventListener('paste', function(e) {
@@ -579,6 +634,11 @@ document.addEventListener('paste', function(e) {
     e.preventDefault();
     pasteTextGrid(text, target);
   }
+});
+
+document.addEventListener('input', function(e) {
+  if (!(e.target instanceof HTMLInputElement)) return;
+  scheduleHistorySnapshot();
 });
 
 document.addEventListener('keydown', function(e) {
@@ -598,8 +658,24 @@ document.addEventListener('keydown', function(e) {
       e.preventDefault();
       copySelectedToClipboard().finally(() => {
         selectedInputs.forEach(inp => { inp.value = ''; });
+        pushHistorySnapshot();
       });
     }
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    undoHistory();
+    return;
+  }
+
+  if (
+    ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+    ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')
+  ) {
+    e.preventDefault();
+    redoHistory();
     return;
   }
 
@@ -618,6 +694,7 @@ document.addEventListener('keydown', function(e) {
   if ((e.key === 'Delete' || e.key === 'Backspace') && selectedInputs.size > 0) {
     e.preventDefault();
     selectedInputs.forEach(inp => { inp.value = ''; });
+    pushHistorySnapshot();
     return;
   }
 
@@ -672,6 +749,7 @@ document.addEventListener('keydown', function(e) {
 updateSyncStatus('connecting');
 readLocalSync();
 syncFromObservation();
+pushHistorySnapshot(true);
 window.addEventListener('storage', (e) => {
   if (e.key !== 'observation_live_sync' || !e.newValue) return;
   try {

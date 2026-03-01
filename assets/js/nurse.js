@@ -691,7 +691,7 @@ document.addEventListener('keydown', function(e) {
     return;
   }
 
-  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedInputs.size > 0) {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedInputs.size > 1) {
     e.preventDefault();
     selectedInputs.forEach(inp => { inp.value = ''; });
     pushHistorySnapshot();

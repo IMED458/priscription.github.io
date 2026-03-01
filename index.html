@@ -182,10 +182,10 @@
   }
 
   @media print {
-    @page { size: A4 landscape; margin:5mm !important; }
+    @page { size: A4 portrait; margin:5mm !important; }
     body, .c { margin:0 !important; padding:0 !important; background:white !important; }
     .nav, #templateModal, #firebaseStatus { display:none !important; }
-    .page { display:block !important; page-break-after:always; padding:5mm !important; width:287mm; min-height:200mm; box-sizing:border-box; }
+    .page { display:block !important; page-break-after:always; padding:5mm !important; width:200mm; min-height:287mm; box-sizing:border-box; }
     input, select { border:none !important; background:transparent !important; }
 
     /* select-ის ისრების მოცილება საბეჭდზე */
@@ -530,6 +530,7 @@
         </tr>
       `);
     });
+    attachSelectionHandlers();
   }
 
   function captureNurseMedQuantities() {
@@ -658,11 +659,13 @@
 
   function attachSelectionHandlers() {
     document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]').forEach(inp => {
+      if (inp.dataset.selectionBound === '1') return;
       inp.addEventListener('mousedown', startSelection);
       inp.addEventListener('mouseenter', mouseEnterDuringSelection);
       inp.addEventListener('focus', () => {
         lastFocusedInput = inp;
       });
+      inp.dataset.selectionBound = '1';
     });
   }
 

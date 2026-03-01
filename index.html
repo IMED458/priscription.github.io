@@ -182,10 +182,10 @@
   }
 
   @media print {
-    @page { size: A4 portrait; margin:5mm !important; }
+    @page { size: A4 landscape; margin:5mm !important; }
     body, .c { margin:0 !important; padding:0 !important; background:white !important; }
     .nav, #templateModal, #firebaseStatus { display:none !important; }
-    .page { display:block !important; page-break-after:always; padding:5mm !important; width:200mm; min-height:287mm; box-sizing:border-box; }
+    .page { display:block !important; page-break-after:always; padding:5mm !important; width:287mm; min-height:200mm; box-sizing:border-box; }
     input, select { border:none !important; background:transparent !important; }
 
     /* select-ის ისრების მოცილება საბეჭდზე */
@@ -215,6 +215,8 @@
   <div class="nav">
     <button class="btn active" data-page="1">1</button>
     <button class="btn" data-page="2">2</button>
+    <button class="btn" data-page="3">ექთანი 1</button>
+    <button class="btn" data-page="4">ექთანი 2</button>
     <button class="btn print" onclick="window.print()">ბეჭდვა</button>
     
     <input type="text" id="templateName" placeholder="შაბლონის სახელი">
@@ -291,6 +293,43 @@
 
     <table id="meds"></table>
 
+    <div class="sign-small">
+      <div>
+        <div class="line-small"></div>
+        <div>ექიმის ხელმოწერა</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- გვერდი 2 -->
+  <div class="page" id="p2">
+    <div class="pname" id="name2">პაციენტის სახელი და გვარი</div>
+    <table id="vitals"></table>
+    <table id="enteral" style="margin:6px 0;"></table>
+    <table id="other"></table>
+    <div class="sign">
+      <div style="text-align:center"><div class="line"></div><br>ექიმი</div>
+      <div style="text-align:center"><div class="line"></div><br>ექთანი</div>
+    </div>
+  </div>
+
+  <!-- გვერდი 3: ექთნის ხარჯი (1) -->
+  <div class="page" id="p3">
+    <div class="pname">სტაციონარის პაციენტის ხარჯთაღრიცხვის ფურცელი</div>
+    <div class="nurse-head">
+      <div class="row"><label>პაციენტი:</label><input type="text" id="nursePatientName"></div>
+      <div class="row"><label>ისტორიის №:</label><input type="text" id="nurseHistoryNo"></div>
+      <div class="row"><label>დიაგნოზი:</label><input type="text" id="nurseDiagnosis"></div>
+      <div class="row"><label>გაეწერა:</label><input type="date" id="nurseDischargeDate"></div>
+      <div class="row"><label>შემოსვლის თარიღი:</label><input type="date" id="nurseAdmissionDate"></div>
+    </div>
+    <div class="nurse-tools">
+      <button class="btn" style="background:#0f766e;" onclick="syncNurseFromObservation()">სინქრონიზაცია</button>
+    </div>
+
+    <div class="nurse-title">სამედიცინო სახარჯი მასალები (გვერდი 1)</div>
+    <table id="nurseExpense1" class="nurse-sheet"></table>
+
     <div class="sign">
       <div style="text-align:center">
         <div class="signature-wrap"><img class="signature-img" src="giorgi esign.png" alt="ექიმის ხელმოწერა" onerror="this.classList.add('missing')"></div>
@@ -305,22 +344,11 @@
     </div>
   </div>
 
-  <!-- გვერდი 2: ექთნის ხარჯის ფურცელი -->
-  <div class="page" id="p2">
-    <div class="pname">სტაციონარის პაციენტის ხარჯთაღრიცხვის ფურცელი</div>
-    <div class="nurse-head">
-      <div class="row"><label>პაციენტი:</label><input type="text" id="nursePatientName"></div>
-      <div class="row"><label>ისტორიის №:</label><input type="text" id="nurseHistoryNo"></div>
-      <div class="row"><label>დიაგნოზი:</label><input type="text" id="nurseDiagnosis"></div>
-      <div class="row"><label>გაეწერა:</label><input type="date" id="nurseDischargeDate"></div>
-      <div class="row"><label>შემოსვლის თარიღი:</label><input type="date" id="nurseAdmissionDate"></div>
-    </div>
-    <div class="nurse-tools">
-      <button class="btn" style="background:#0f766e;" onclick="syncNurseFromObservation()">სინქრონიზაცია</button>
-    </div>
-
-    <div class="nurse-title">ხარჯი</div>
-    <table id="nurseExpense" class="nurse-sheet"></table>
+  <!-- გვერდი 4: ექთნის ხარჯი (2) -->
+  <div class="page" id="p4">
+    <div class="pname">სტაციონარის პაციენტის ხარჯთაღრიცხვის ფურცელი (გაგრძელება)</div>
+    <div class="nurse-title">სამედიცინო სახარჯი მასალები (გვერდი 2)</div>
+    <table id="nurseExpense2" class="nurse-sheet"></table>
 
     <div class="nurse-med-title">მედიკამენტები (სინქრონიზაცია დაკვირვების ფურცლიდან)</div>
     <table id="nurseMeds" class="nurse-sheet"></table>
@@ -449,6 +477,8 @@
     ['ფილტრი', 'ც.ვ.კ 3 არხ'],
     ['სტ.ხელთათმანი', 'ბეტადინი']
   ];
+  const NURSE_EXPENSE_PAGE1 = NURSE_EXPENSE_PAIRS.slice(0, 10);
+  const NURSE_EXPENSE_PAGE2 = NURSE_EXPENSE_PAIRS.slice(10);
 
   function escapeHtml(value) {
     return String(value)
@@ -485,28 +515,54 @@
   }
   document.getElementById('meds').innerHTML = medsHTML;
 
-  // ექთნის ხარჯი (docx შაბლონის მიხედვით)
-  let nurseExpenseHTML = `
-    <tr>
-      <th>დასახელება</th><th>რაოდენობა</th>
-      <th>დასახელება</th><th>რაოდენობა</th>
-    </tr>
-  `;
-  NURSE_EXPENSE_PAIRS.forEach((pair, idx) => {
-    nurseExpenseHTML += `
+  function buildNurseExpenseTable(pairs, tableId, startIndex) {
+    let html = `
       <tr>
-        <td class="n-name">${idx + 1}. ${pair[0]}</td>
-        <td class="n-qty"><input type="text" data-nurse-expense="${idx}-0"></td>
-        <td class="n-name">${idx + 1}. ${pair[1]}</td>
-        <td class="n-qty"><input type="text" data-nurse-expense="${idx}-1"></td>
+        <th>დასახელება</th><th>რაოდენობა</th>
+        <th>დასახელება</th><th>რაოდენობა</th>
       </tr>
     `;
-  });
-  document.getElementById('nurseExpense').innerHTML = nurseExpenseHTML;
+    pairs.forEach((pair, idx) => {
+      const rowNo = startIndex + idx;
+      html += `
+        <tr>
+          <td class="n-name">${rowNo}. ${pair[0]}</td>
+          <td class="n-qty"><input type="text" data-nurse-expense="${rowNo - 1}-0"></td>
+          <td class="n-name">${rowNo}. ${pair[1]}</td>
+          <td class="n-qty"><input type="text" data-nurse-expense="${rowNo - 1}-1"></td>
+        </tr>
+      `;
+    });
+    document.getElementById(tableId).innerHTML = html;
+  }
+  buildNurseExpenseTable(NURSE_EXPENSE_PAGE1, 'nurseExpense1', 1);
+  buildNurseExpenseTable(NURSE_EXPENSE_PAGE2, 'nurseExpense2', 11);
 
   document.getElementById('nurseMeds').innerHTML = `
     <tr><th style="width:70px;">№</th><th>მედიკამენტი</th><th style="width:120px;">რაოდენობა</th></tr>
   `;
+
+  // vitals
+  const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
+  let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
+  vit.forEach(p => {
+    vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
+  });
+  document.getElementById('vitals').innerHTML = vitHTML;
+
+  // enteral
+  document.getElementById('enteral').innerHTML = `
+    <tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
+    <tr><td class="drug">მლ</td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+  `;
+
+  // other
+  const oth = ['დიურეზი','დეფეკაცია','ოყნა','დრენაჟი','ბალანსი'];
+  let othHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
+  oth.forEach(p => {
+    othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
+  });
+  document.getElementById('other').innerHTML = othHTML;
 
   function syncNurseMedsFromObservation(preservedQtyByName = new Map()) {
     const medsRows = document.querySelectorAll('#meds tr:not(:first-child)');
@@ -1006,7 +1062,7 @@
       admissionDate: document.getElementById('nurseAdmissionDate').value
     };
 
-    const nurseExpenseQty = Array.from(document.querySelectorAll('#nurseExpense .n-qty input')).map(i => i.value.trim());
+    const nurseExpenseQty = Array.from(document.querySelectorAll('#nurseExpense1 .n-qty input, #nurseExpense2 .n-qty input')).map(i => i.value.trim());
     const nurseMedsQty = Array.from(document.querySelectorAll('#nurseMeds .n-med-qty input')).map(i => ({
       name: i.dataset.nurseMedName || '',
       qty: i.value.trim()
@@ -1066,7 +1122,7 @@
       document.getElementById('nurseAdmissionDate').value = data.nurse.meta.admissionDate || '';
     }
 
-    document.querySelectorAll('#nurseExpense .n-qty input').forEach((inp, i) => {
+    document.querySelectorAll('#nurseExpense1 .n-qty input, #nurseExpense2 .n-qty input').forEach((inp, i) => {
       inp.value = data.nurse?.expenseQty?.[i] || '';
     });
 
@@ -1095,7 +1151,7 @@
     document.getElementById('nurseDiagnosis').value = '';
     document.getElementById('nurseDischargeDate').value = '';
     document.getElementById('nurseAdmissionDate').value = '';
-    document.querySelectorAll('#nurseExpense .n-qty input').forEach(inp => inp.value = '');
+    document.querySelectorAll('#nurseExpense1 .n-qty input, #nurseExpense2 .n-qty input').forEach(inp => inp.value = '');
     document.getElementById('nurseMeds').innerHTML = `
       <tr><th style="width:70px;">№</th><th>მედიკამენტი</th><th style="width:120px;">რაოდენობა</th></tr>
     `;

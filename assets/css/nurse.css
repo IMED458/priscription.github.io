@@ -22,6 +22,7 @@ body {
 .status-connecting { background: #ea580c; }
 
 .c {
+  width: 100%;
   max-width: 210mm;
   margin: auto;
   background: white;
@@ -67,7 +68,7 @@ body {
 
 #nurseTemplateName { width: 150px; padding: 5px; font-size: 12px; }
 
-.page { display: none; padding: 6mm 8mm; }
+.page { display: none; padding: 2mm; }
 .page.active { display: block; }
 
 .nurse-pdf-title {
@@ -100,7 +101,7 @@ body {
 }
 
 .nurse-sheet {
-  width: 86%;
+  width: 100%;
   margin: 0 auto;
   border-collapse: collapse;
   table-layout: fixed;
@@ -188,16 +189,24 @@ input.selected-cell {
 
 @media print {
   @page { size: A4 portrait; margin: 5mm !important; }
-  body, .c { margin: 0 !important; padding: 0 !important; background: white !important; box-shadow: none !important; }
+  body, .c {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    background: white !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
   .nav, #firebaseStatus, #nurseTemplateModal { display: none !important; }
   .page {
     display: block !important;
     break-after: page;
     page-break-after: always;
-    width: 200mm;
+    width: auto;
     min-height: auto;
     box-sizing: border-box;
-    padding: 4mm 6mm;
+    padding: 1mm;
   }
   .page:last-child {
     break-after: auto !important;

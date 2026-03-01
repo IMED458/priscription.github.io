@@ -1,0 +1,186 @@
+const NURSE_ROW_COUNT = 24;
+const NURSE_LEFT_ITEMS = [
+  'არასტ.ხელთათმანი',
+  'შპრიცი 2მლ',
+  'შპრიცი 5მლ',
+  'შპრიცი 10 მლ',
+  'შპრიცი 20მლ',
+  'პ.ვ.კ',
+  'პვკ ფიქსატორი',
+  'სისტემა',
+  'სტოპკოკი',
+  'ეკგ ქაღალდი',
+  'ლიპუჩკა',
+  'გლუკ.ჩხირი',
+  'სპირტი',
+  'ბინტი',
+  'პირბადე',
+  'ერთ.ზეწარი',
+  'ერთ.ქუდი',
+  'ბახილები',
+  'ე/ტ მილი',
+  'კონტური',
+  'ფილტრი',
+  'ც.ვ.კ 3 არხ',
+  'სტ.ხელთათმანი',
+  'ბეტადინი'
+];
+const NURSE_RIGHT_ITEMS = [
+  'წყალბ.ზეჟ',
+  'კერვა 2.0',
+  'ბეტაპადი',
+  'შ.ბ.კ',
+  'ბეგი',
+  'კატეჟელე',
+  'ნ/გ ზონდი',
+  'პამპერსის საფენი',
+  'ჟანე',
+  'იანკაუერი',
+  '50მლ შპრიცი',
+  'სისტემის დამაგრძ.',
+  'სანაციის მილი',
+  'სტ.ხალათი',
+  'სტ.ზეწარი',
+  'სკალპელი',
+  '', '', '', '', '', '', '', ''
+];
+
+function buildNurseExpenseTable(tableId, leftItems, rightItems) {
+  let html = `
+    <colgroup>
+      <col style="width:30%">
+      <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
+      <col style="width:30%">
+      <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
+    </colgroup>
+    <tr>
+      <th>დასახელება</th><th colspan="4">რაოდენობა</th>
+      <th>დასახელება</th><th colspan="4">რაოდენობა</th>
+    </tr>
+  `;
+  for (let idx = 0; idx < NURSE_ROW_COUNT; idx++) {
+    const left = leftItems[idx] || '';
+    const right = rightItems[idx] || '';
+    html += `
+      <tr>
+        <td class="n-name">${left}</td>
+        <td class="n-qty"><input type="text"></td>
+        <td class="n-qty"><input type="text"></td>
+        <td class="n-qty"><input type="text"></td>
+        <td class="n-qty"><input type="text"></td>
+        <td class="n-name">${right}</td>
+        <td class="n-qty"><input type="text"></td>
+        <td class="n-qty"><input type="text"></td>
+        <td class="n-qty"><input type="text"></td>
+        <td class="n-qty"><input type="text"></td>
+      </tr>
+    `;
+  }
+  document.getElementById(tableId).innerHTML = html;
+}
+
+buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
+buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
+
+document.querySelectorAll('[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('p' + btn.dataset.page).classList.add('active');
+    document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+let isSelecting = false;
+let selectedInputs = new Set();
+let lastFocusedInput = null;
+
+function clearSelection() {
+  selectedInputs.forEach(inp => inp.classList.remove('selected-cell'));
+  selectedInputs.clear();
+}
+
+function addToSelection(input) {
+  selectedInputs.add(input);
+  input.classList.add('selected-cell');
+}
+
+function removeFromSelection(input) {
+  selectedInputs.delete(input);
+  input.classList.remove('selected-cell');
+}
+
+function toggleSelection(input) {
+  if (selectedInputs.has(input)) {
+    removeFromSelection(input);
+  } else {
+    addToSelection(input);
+  }
+}
+
+function getCellPosition(input) {
+  const cell = input.closest('td,th');
+  const row = cell?.parentElement;
+  const table = row?.closest('table');
+  if (!cell || !row || !table) return null;
+  const rows = Array.from(table.rows);
+  const rowIndex = rows.indexOf(row);
+  const cells = Array.from(row.cells);
+  const cellIndex = cells.indexOf(cell);
+  return { table, rowIndex, cellIndex };
+}
+
+function selectRange(fromInput, toInput) {
+  const fromPos = getCellPosition(fromInput);
+  const toPos = getCellPosition(toInput);
+  if (!fromPos || !toPos || fromPos.table !== toPos.table) return;
+
+  const rows = Array.from(fromPos.table.rows);
+  const minRow = Math.min(fromPos.rowIndex, toPos.rowIndex);
+  const maxRow = Math.max(fromPos.rowIndex, toPos.rowIndex);
+  const minCol = Math.min(fromPos.cellIndex, toPos.cellIndex);
+  const maxCol = Math.max(fromPos.cellIndex, toPos.cellIndex);
+
+  clearSelection();
+  for (let r = minRow; r <= maxRow; r++) {
+    const row = rows[r];
+    for (let c = minCol; c <= maxCol; c++) {
+      const cell = row.cells[c];
+      if (!cell) continue;
+      const inp = cell.querySelector('input');
+      if (inp) addToSelection(inp);
+    }
+  }
+}
+
+function startSelection(e) {
+  if (e.button !== 0) return;
+  if (e.ctrlKey || e.metaKey) {
+    toggleSelection(this);
+    return;
+  }
+  if (e.shiftKey && lastFocusedInput && lastFocusedInput.isConnected) {
+    selectRange(lastFocusedInput, this);
+    return;
+  }
+  clearSelection();
+  isSelecting = true;
+  addToSelection(this);
+}
+
+function mouseEnterDuringSelection() {
+  if (isSelecting) addToSelection(this);
+}
+
+function attachSelectionHandlers() {
+  document.querySelectorAll('input[type="text"], input[type="date"]').forEach(inp => {
+    if (inp.dataset.selectionBound === '1') return;
+    inp.addEventListener('mousedown', startSelection);
+    inp.addEventListener('mouseenter', mouseEnterDuringSelection);
+    inp.addEventListener('focus', () => { lastFocusedInput = inp; });
+    inp.dataset.selectionBound = '1';
+  });
+}
+
+document.addEventListener('mouseup', () => { isSelecting = false; });
+attachSelectionHandlers();

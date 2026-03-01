@@ -19,8 +19,7 @@
   <div class="nav">
     <button class="btn active" data-page="1">1</button>
     <button class="btn" data-page="2">2</button>
-    <button class="btn" data-page="3">ექთანი 1</button>
-    <button class="btn" data-page="4">ექთანი 2</button>
+    <button class="btn" onclick="window.open('nurse.html', '_blank', 'noopener')">ექთანი</button>
     <button class="btn print" onclick="window.print()">ბეჭდვა</button>
     
     <input type="text" id="templateName" placeholder="შაბლონის სახელი">
@@ -117,25 +116,6 @@
     </div>
   </div>
 
-  <!-- გვერდი 3: ექთნის ხარჯი (1) -->
-  <div class="page nurse-pdf-page" id="p3">
-    <div class="nurse-pdf-title">სტაციონარის პაციენტის ხარჯთაღრიცხვის<br>ფურცელი</div>
-    <div class="nurse-head">
-      <div class="row"><label>ისტორიის №:</label><input type="text" id="nurseHistoryNo"></div>
-      <div class="row"><label>დიაგნოზი:</label><input type="text" id="nurseDiagnosis"></div>
-      <div class="row"><label>გაეწერა:</label><input type="date" id="nurseDischargeDate"></div>
-      <div class="row"><label>შემოსვლის თარიღი:</label><input type="date" id="nurseAdmissionDate"></div>
-    </div>
-    <div class="nurse-tools">
-      <button class="btn" style="background:#0f766e;" onclick="syncNurseFromObservation()">სინქრონიზაცია</button>
-    </div>
-    <table id="nurseExpense1" class="nurse-sheet"></table>
-  </div>
-
-  <!-- გვერდი 4: ექთნის ხარჯი (2) -->
-  <div class="page nurse-pdf-page" id="p4">
-    <table id="nurseExpense2" class="nurse-sheet"></table>
-  </div>
 </div>
 
 <!-- შაბლონების მოდალი -->

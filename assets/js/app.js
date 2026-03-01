@@ -62,59 +62,6 @@
 
   // საათობრივი ბადე
   const HOURS = [...Array(16).keys()].map(i => i + 9).concat([...Array(9).keys()].map(i => i + 1));
-  const NURSE_ROW_COUNT = 24;
-  const NURSE_LEFT_ITEMS = [
-    'არასტ.ხელთათმანი',
-    'შპრიცი 2მლ',
-    'შპრიცი 5მლ',
-    'შპრიცი 10 მლ',
-    'შპრიცი 20მლ',
-    'პ.ვ.კ',
-    'პვკ ფიქსატორი',
-    'სისტემა',
-    'სტოპკოკი',
-    'ეკგ ქაღალდი',
-    'ლიპუჩკა',
-    'გლუკ.ჩხირი',
-    'სპირტი',
-    'ბინტი',
-    'პირბადე',
-    'ერთ.ზეწარი',
-    'ერთ.ქუდი',
-    'ბახილები',
-    'ე/ტ მილი',
-    'კონტური',
-    'ფილტრი',
-    'ც.ვ.კ 3 არხ',
-    'სტ.ხელთათმანი',
-    'ბეტადინი'
-  ];
-  const NURSE_RIGHT_ITEMS = [
-    'წყალბ.ზეჟ',
-    'კერვა 2.0',
-    'ბეტაპადი',
-    'შ.ბ.კ',
-    'ბეგი',
-    'კატეჟელე',
-    'ნ/გ ზონდი',
-    'პამპერსის საფენი',
-    'ჟანე',
-    'იანკაუერი',
-    '50მლ შპრიცი',
-    'სისტემის დამაგრძ.',
-    'სანაციის მილი',
-    'სტ.ხალათი',
-    'სტ.ზეწარი',
-    'სკალპელი',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    ''
-  ];
 
   function updName() {
     const name = document.getElementById('fullName').value.trim() || 'პაციენტის სახელი და გვარი';
@@ -142,51 +89,6 @@
   }
   document.getElementById('meds').innerHTML = medsHTML;
 
-  function buildNurseExpenseTable(tableId, leftItems, rightItems) {
-    let html = `
-      <colgroup>
-        <col style="width:30%">
-        <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
-        <col style="width:30%">
-        <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
-      </colgroup>
-      <tr>
-        <th>დასახელება</th><th colspan="4">რაოდენობა</th>
-        <th>დასახელება</th><th colspan="4">რაოდენობა</th>
-      </tr>
-    `;
-    for (let idx = 0; idx < NURSE_ROW_COUNT; idx++) {
-      const left = leftItems[idx] || '';
-      const right = rightItems[idx] || '';
-      html += `
-        <tr>
-          <td class="n-name">${left}</td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l1"></td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l2"></td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l3"></td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l4"></td>
-          <td class="n-name">${right}</td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r1"></td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r2"></td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r3"></td>
-          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r4"></td>
-        </tr>
-      `;
-    }
-    document.getElementById(tableId).innerHTML = html;
-  }
-  buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
-  buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
-
-  function syncNurseNamesFromMeds() {
-    const medNames = Array.from(document.querySelectorAll('#meds tr:not(:first-child) .drug input'))
-      .map(inp => inp.value.trim())
-      .filter(Boolean);
-    const nameCells = Array.from(document.querySelectorAll('#nurseExpense1 tr td.n-name'));
-    nameCells.forEach((cell, idx) => {
-      cell.textContent = medNames[idx] || '';
-    });
-  }
 
   // vitals
   const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
@@ -209,13 +111,6 @@
     othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
   });
   document.getElementById('other').innerHTML = othHTML;
-
-  function syncNurseFromObservation() {
-    document.getElementById('nurseHistoryNo').value = document.getElementById('hist').value.trim();
-    document.getElementById('nurseAdmissionDate').value = document.getElementById('admission').value;
-    syncNurseNamesFromMeds();
-  }
-  window.syncNurseFromObservation = syncNurseFromObservation;
 
   document.getElementById('today').value = new Date().toISOString().split('T')[0];
   updName();
@@ -664,24 +559,11 @@
       values: Array.from(row.querySelectorAll('input')).map(i => i.value.trim())
     }));
 
-    const nurseMeta = {
-      historyNo: document.getElementById('nurseHistoryNo').value.trim(),
-      diagnosis: document.getElementById('nurseDiagnosis').value.trim(),
-      dischargeDate: document.getElementById('nurseDischargeDate').value,
-      admissionDate: document.getElementById('nurseAdmissionDate').value
-    };
-
-    const nurseExpenseQty = Array.from(document.querySelectorAll('.n-exp-input')).map(i => i.value.trim());
-
     return {
       meds,
       vitals,
       enteral,
-      other,
-      nurse: {
-        meta: nurseMeta,
-        expenseQty: nurseExpenseQty
-      }
+      other
     };
   }
 
@@ -718,17 +600,6 @@
       });
     });
 
-    if (data.nurse?.meta) {
-      document.getElementById('nurseHistoryNo').value = data.nurse.meta.historyNo || '';
-      document.getElementById('nurseDiagnosis').value = data.nurse.meta.diagnosis || '';
-      document.getElementById('nurseDischargeDate').value = data.nurse.meta.dischargeDate || '';
-      document.getElementById('nurseAdmissionDate').value = data.nurse.meta.admissionDate || '';
-    }
-
-    document.querySelectorAll('.n-exp-input').forEach((inp, i) => {
-      inp.value = data.nurse?.expenseQty?.[i] || '';
-    });
-
     attachSelectionHandlers();
   }
 
@@ -745,13 +616,6 @@
     rows[27].querySelector('.drug input').value = 'ვაზოპრესორი';
     rows[32].querySelector('.drug input').value = 'insulini';
     rows[33].querySelector('.drug input').value = 'შაქრის კონტროლი';
-
-    document.getElementById('nurseHistoryNo').value = '';
-    document.getElementById('nurseDiagnosis').value = '';
-    document.getElementById('nurseDischargeDate').value = '';
-    document.getElementById('nurseAdmissionDate').value = '';
-    document.querySelectorAll('.n-exp-input').forEach(inp => inp.value = '');
-    document.querySelectorAll('#nurseExpense1 tr td.n-name').forEach(cell => cell.textContent = '');
 
     clearSelection();
     updName();

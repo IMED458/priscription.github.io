@@ -178,6 +178,16 @@
   buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
   buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
 
+  function syncNurseNamesFromMeds() {
+    const medNames = Array.from(document.querySelectorAll('#meds tr:not(:first-child) .drug input'))
+      .map(inp => inp.value.trim())
+      .filter(Boolean);
+    const nameCells = Array.from(document.querySelectorAll('#nurseExpense1 tr td.n-name'));
+    nameCells.forEach((cell, idx) => {
+      cell.textContent = medNames[idx] || '';
+    });
+  }
+
   // vitals
   const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
   let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
@@ -203,6 +213,7 @@
   function syncNurseFromObservation() {
     document.getElementById('nurseHistoryNo').value = document.getElementById('hist').value.trim();
     document.getElementById('nurseAdmissionDate').value = document.getElementById('admission').value;
+    syncNurseNamesFromMeds();
   }
   window.syncNurseFromObservation = syncNurseFromObservation;
 
@@ -740,6 +751,7 @@
     document.getElementById('nurseDischargeDate').value = '';
     document.getElementById('nurseAdmissionDate').value = '';
     document.querySelectorAll('.n-exp-input').forEach(inp => inp.value = '');
+    document.querySelectorAll('#nurseExpense1 tr td.n-name').forEach(cell => cell.textContent = '');
 
     clearSelection();
     updName();

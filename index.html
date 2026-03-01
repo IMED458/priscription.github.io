@@ -215,7 +215,6 @@
   <div class="nav">
     <button class="btn active" data-page="1">1</button>
     <button class="btn" data-page="2">2</button>
-    <button class="btn" data-page="3">ექთანი</button>
     <button class="btn print" onclick="window.print()">ბეჭდვა</button>
     
     <input type="text" id="templateName" placeholder="შაბლონის სახელი">
@@ -306,28 +305,8 @@
     </div>
   </div>
 
-  <!-- გვერდი 2 -->
+  <!-- გვერდი 2: ექთნის ხარჯის ფურცელი -->
   <div class="page" id="p2">
-    <div class="pname" id="name2">პაციენტის სახელი და გვარი</div>
-    <table id="vitals"></table>
-    <table id="enteral" style="margin:6px 0;"></table>
-    <table id="other"></table>
-    <div class="sign">
-      <div style="text-align:center">
-        <div class="signature-wrap"><img class="signature-img" src="giorgi esign.png" alt="ექიმის ხელმოწერა" onerror="this.classList.add('missing')"></div>
-        <div class="line"></div>
-        <div>ექიმი</div>
-      </div>
-      <div style="text-align:center">
-        <div class="signature-wrap"><img class="signature-img" src="giorgi esign.png" alt="ექთნის ხელმოწერა" onerror="this.classList.add('missing')"></div>
-        <div class="line"></div>
-        <div>ექთანი</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- გვერდი 3: ექთნის ხარჯის ფურცელი -->
-  <div class="page" id="p3">
     <div class="pname">სტაციონარის პაციენტის ხარჯთაღრიცხვის ფურცელი</div>
     <div class="nurse-head">
       <div class="row"><label>პაციენტი:</label><input type="text" id="nursePatientName"></div>
@@ -529,28 +508,6 @@
     <tr><th style="width:70px;">№</th><th>მედიკამენტი</th><th style="width:120px;">რაოდენობა</th></tr>
   `;
 
-  // vitals
-  const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
-  let vitHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
-  vit.forEach(p => {
-    vitHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
-  });
-  document.getElementById('vitals').innerHTML = vitHTML;
-
-  // enteral
-  document.getElementById('enteral').innerHTML = `
-    <tr><th class="drug">ენტერალური კვება</th><th>დილა</th><th>შუადღე</th><th>საღამო</th></tr>
-    <tr><td class="drug">მლ</td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
-  `;
-
-  // other
-  const oth = ['დიურეზი','დეფეკაცია','ოყნა','დრენაჟი','ბალანსი'];
-  let othHTML = `<tr><th class="drug">პარამეტრი</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
-  oth.forEach(p => {
-    othHTML += `<tr><td class="drug">${p}</td>${HOURS.map(() => `<td><input type="text"></td>`).join('')}</tr>`;
-  });
-  document.getElementById('other').innerHTML = othHTML;
-
   function syncNurseMedsFromObservation(preservedQtyByName = new Map()) {
     const medsRows = document.querySelectorAll('#meds tr:not(:first-child)');
     const names = [];
@@ -593,14 +550,7 @@
   }
   window.syncNurseFromObservation = syncNurseFromObservation;
 
-  document.getElementById('meds').addEventListener('input', (e) => {
-    if (!e.target.matches('.drug input')) return;
-    const qtyMap = captureNurseMedQuantities();
-    syncNurseMedsFromObservation(qtyMap);
-  });
-
   document.getElementById('today').value = new Date().toISOString().split('T')[0];
-  syncNurseFromObservation();
   updName();
 
   // გვერდების გადართვა
@@ -1137,9 +1087,15 @@
     rows[32].querySelector('.drug input').value = 'insulini';
     rows[33].querySelector('.drug input').value = 'შაქრის კონტროლი';
 
-    document.getElementById('nurseAdmissionDate').value = document.getElementById('admission').value || '';
-    document.getElementById('nurseHistoryNo').value = document.getElementById('hist').value || '';
-    syncNurseMedsFromObservation();
+    document.getElementById('nursePatientName').value = '';
+    document.getElementById('nurseHistoryNo').value = '';
+    document.getElementById('nurseDiagnosis').value = '';
+    document.getElementById('nurseDischargeDate').value = '';
+    document.getElementById('nurseAdmissionDate').value = '';
+    document.querySelectorAll('#nurseExpense .n-qty input').forEach(inp => inp.value = '');
+    document.getElementById('nurseMeds').innerHTML = `
+      <tr><th style="width:70px;">№</th><th>მედიკამენტი</th><th style="width:120px;">რაოდენობა</th></tr>
+    `;
 
     clearSelection();
     updName();

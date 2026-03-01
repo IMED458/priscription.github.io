@@ -188,33 +188,25 @@ input.selected-cell {
 }
 
 @media print {
-  @page { size: A4 portrait; margin: 0 !important; }
-  html, body {
+  @page { size: A4 portrait; margin: 5mm !important; }
+  body, .c {
     margin: 0 !important;
     padding: 0 !important;
-    width: 210mm !important;
-    background: white !important;
-  }
-  body, .c {
-    margin: 0 auto !important;
-    padding: 0 !important;
-    width: 210mm !important;
-    max-width: 210mm !important;
+    width: 100% !important;
+    max-width: none !important;
     background: white !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    overflow: visible !important;
   }
-  .header, .nav, #firebaseStatus, #nurseTemplateModal { display: none !important; }
+  .nav, #firebaseStatus, #nurseTemplateModal { display: none !important; }
   .page {
     display: block !important;
     break-after: page;
     page-break-after: always;
-    width: 210mm !important;
-    min-height: 297mm !important;
-    height: 297mm !important;
+    width: auto;
+    min-height: auto;
     box-sizing: border-box;
-    padding: 2mm;
+    padding: 1mm;
   }
   .page:last-child {
     break-after: auto !important;
@@ -226,5 +218,26 @@ input.selected-cell {
     -webkit-appearance: none;
     appearance: none;
   }
-  .nurse-sheet { width: 100% !important; }
+  .nurse-sheet th,
+  .nurse-sheet td,
+  .nurse-sheet .n-qty input,
+  .nurse-sheet .n-name .n-name-input {
+    font-size: 9pt !important;
+  }
+  .nurse-sheet th,
+  .nurse-sheet td {
+    height: 7.1mm !important;
+  }
+  .nurse-pdf-title {
+    font-size: 13pt !important;
+    margin: 1mm 0 3mm !important;
+  }
+  .nurse-head {
+    font-size: 10pt !important;
+    gap: 2mm 8mm !important;
+    margin-bottom: 2mm !important;
+  }
+  .nurse-head input {
+    font-size: 10pt !important;
+  }
 }

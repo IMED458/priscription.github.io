@@ -165,8 +165,11 @@ function buildNurseExpenseTable(tableId, leftItems, rightItems) {
   document.getElementById(tableId).innerHTML = html;
 }
 
-buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
-buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
+function renderNurseTables() {
+  buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
+  buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
+}
+renderNurseTables();
 
 let lastSyncedMeds = [];
 
@@ -332,6 +335,22 @@ window.saveNurseTemplate = async function() {
   } catch (err) {
     alert('შენახვის შეცდომა: ' + err.message);
   }
+};
+
+window.clearNurseAll = function() {
+  if (!confirm('გსურთ ექთნის ფურცლის სრულად გასუფთავება?')) return;
+  document.getElementById('nurseHistoryNo').value = '';
+  document.getElementById('nurseDiagnosis').value = '';
+  document.getElementById('nurseFullName').value = '';
+  document.getElementById('nurseAdmissionDate').value = '';
+  renderNurseTables();
+  clearSelection();
+  lastSyncedMeds = [];
+  attachSelectionHandlers();
+  document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-page=\"1\"]')?.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('p1')?.classList.add('active');
 };
 
 function readLocalSync() {

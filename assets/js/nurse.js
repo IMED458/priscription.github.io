@@ -172,6 +172,7 @@ function renderNurseTables() {
 renderNurseTables();
 
 let lastSyncedMeds = [];
+let hasObservationMedicationSync = false;
 
 function applyLiveSyncPayload(payload) {
   if (!payload) return;
@@ -196,6 +197,7 @@ function applyLiveSyncPayload(payload) {
     }
   });
   lastSyncedMeds = meds.slice(0, nameInputs.length);
+  hasObservationMedicationSync = meds.length > 0;
 }
 
 async function syncFromObservation() {
@@ -217,6 +219,10 @@ async function syncFromObservation() {
 window.syncFromObservation = syncFromObservation;
 
 function getNurseTemplatePayload() {
+  const namesPage1 = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input')).map(el => el.value.trim());
+  const namesPage2 = Array.from(document.querySelectorAll('#nurseExpense2 .n-name-input')).map(el => el.value.trim());
+  const qtyPage1 = Array.from(document.querySelectorAll('#nurseExpense1 .n-qty input')).map(el => el.value.trim());
+  const qtyPage2 = Array.from(document.querySelectorAll('#nurseExpense2 .n-qty input')).map(el => el.value.trim());
   return {
     header: {
       historyNo: document.getElementById('nurseHistoryNo').value.trim(),
@@ -224,24 +230,52 @@ function getNurseTemplatePayload() {
       fullName: document.getElementById('nurseFullName').value.trim(),
       admissionDate: document.getElementById('nurseAdmissionDate').value
     },
-    names: Array.from(document.querySelectorAll('.n-name-input')).map(el => el.value.trim()),
-    qty: Array.from(document.querySelectorAll('.n-qty input')).map(el => el.value.trim())
+    namesPage1,
+    namesPage2,
+    qtyPage1,
+    qtyPage2,
+    // legacy fields kept for backward compatibility
+    names: namesPage1.concat(namesPage2),
+    qty: qtyPage1.concat(qtyPage2)
   };
 }
 
-function applyNurseTemplatePayload(data) {
+function applyNurseTemplatePayload(data, opts = {}) {
   if (!data) return;
-  if (data.header) {
+  const onlySecondPage = Boolean(opts.onlySecondPage);
+  const nameInputsPage1 = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input'));
+  const nameInputsPage2 = Array.from(document.querySelectorAll('#nurseExpense2 .n-name-input'));
+  const qtyInputsPage1 = Array.from(document.querySelectorAll('#nurseExpense1 .n-qty input'));
+  const qtyInputsPage2 = Array.from(document.querySelectorAll('#nurseExpense2 .n-qty input'));
+
+  const legacyNames = Array.isArray(data.names) ? data.names : [];
+  const legacyQty = Array.isArray(data.qty) ? data.qty : [];
+  const namesPage1 = Array.isArray(data.namesPage1) ? data.namesPage1 : legacyNames.slice(0, nameInputsPage1.length);
+  const namesPage2 = Array.isArray(data.namesPage2) ? data.namesPage2 : legacyNames.slice(nameInputsPage1.length, nameInputsPage1.length + nameInputsPage2.length);
+  const qtyPage1 = Array.isArray(data.qtyPage1) ? data.qtyPage1 : legacyQty.slice(0, qtyInputsPage1.length);
+  const qtyPage2 = Array.isArray(data.qtyPage2) ? data.qtyPage2 : legacyQty.slice(qtyInputsPage1.length, qtyInputsPage1.length + qtyInputsPage2.length);
+
+  if (!onlySecondPage && data.header) {
     document.getElementById('nurseHistoryNo').value = data.header.historyNo || '';
     document.getElementById('nurseDiagnosis').value = data.header.diagnosis || '';
     document.getElementById('nurseFullName').value = data.header.fullName || '';
     document.getElementById('nurseAdmissionDate').value = data.header.admissionDate || '';
   }
-  document.querySelectorAll('.n-name-input').forEach((el, i) => {
-    el.value = data.names?.[i] || '';
+
+  if (!onlySecondPage) {
+    nameInputsPage1.forEach((el, i) => {
+      el.value = namesPage1?.[i] || '';
+    });
+    qtyInputsPage1.forEach((el, i) => {
+      el.value = qtyPage1?.[i] || '';
+    });
+  }
+
+  nameInputsPage2.forEach((el, i) => {
+    el.value = namesPage2?.[i] || '';
   });
-  document.querySelectorAll('.n-qty input').forEach((el, i) => {
-    el.value = data.qty?.[i] || '';
+  qtyInputsPage2.forEach((el, i) => {
+    el.value = qtyPage2?.[i] || '';
   });
 }
 
@@ -292,7 +326,7 @@ window.loadNurseTemplateById = async function(id) {
   try {
     const snap = await getDoc(doc(db, "nurse_templates", id));
     if (snap.exists()) {
-      applyNurseTemplatePayload(snap.data().payload);
+      applyNurseTemplatePayload(snap.data().payload, { onlySecondPage: hasObservationMedicationSync });
       alert(`შაბლონი „${snap.data().name}“ ჩაიტვირთა!`);
       window.closeNurseTemplateModal();
     }
@@ -346,6 +380,7 @@ window.clearNurseAll = function() {
   renderNurseTables();
   clearSelection();
   lastSyncedMeds = [];
+  hasObservationMedicationSync = false;
   attachSelectionHandlers();
   document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-page=\"1\"]')?.classList.add('active');

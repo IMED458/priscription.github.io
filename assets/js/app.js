@@ -49,7 +49,11 @@
 
   async function checkFirebaseConnection() {
     try {
-      await getDocs(query(collection(db, "observation_templates"), orderBy("createdAt")));
+      await setDoc(liveSyncRef, {
+        heartbeat: Date.now(),
+        heartbeatAt: serverTimestamp()
+      }, { merge: true });
+      await getDoc(liveSyncRef);
       updateFirebaseStatus(true);
     } catch (err) {
       updateFirebaseStatus(false);

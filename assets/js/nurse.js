@@ -84,6 +84,24 @@ function updateSyncStatus(mode) {
   statusEl.className = 'status-connecting';
 }
 
+function extractMedicationName(raw) {
+  const text = (raw || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+
+  const stopToken = /(\d|mg|ml|mcg|iu|g\/|%|x\b|i\/v|i\.v|i\/m|i\.m|p\/o|p\.o)/i;
+  const tokens = text.split(' ');
+  const out = [];
+  for (const t of tokens) {
+    if (out.length > 0 && stopToken.test(t)) break;
+    out.push(t);
+    if (out.length >= 5) break;
+  }
+  let name = out.join(' ').trim();
+  if (!name) name = text;
+  if (/^sol\.?/i.test(name) && !/[.!?]$/.test(name)) name += '.';
+  return name;
+}
+
 function buildNurseExpenseTable(tableId, leftItems, rightItems) {
   let html = `
     <colgroup>
@@ -131,7 +149,7 @@ function applyLiveSyncPayload(payload) {
   document.getElementById('nurseFullName').value = passport.fullName || '';
   document.getElementById('nurseAdmissionDate').value = passport.admission || '';
 
-  const meds = Array.isArray(payload.medications) ? payload.medications : [];
+  const meds = (Array.isArray(payload.medications) ? payload.medications : []).map(extractMedicationName).filter(Boolean);
   const nameInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input'));
   nameInputs.forEach((inp, idx) => {
     const current = inp.value.trim();
@@ -143,6 +161,24 @@ function applyLiveSyncPayload(payload) {
   });
   lastSyncedMeds = meds.slice(0, nameInputs.length);
 }
+
+async function syncFromObservation() {
+  updateSyncStatus('connecting');
+  readLocalSync();
+  try {
+    const snap = await getDoc(liveSyncRef);
+    if (snap.exists()) {
+      applyLiveSyncPayload(snap.data());
+      updateSyncStatus('online');
+    } else {
+      updateSyncStatus('offline');
+    }
+  } catch (_) {
+    updateSyncStatus('offline');
+    readLocalSync();
+  }
+}
+window.syncFromObservation = syncFromObservation;
 
 function readLocalSync() {
   try {
@@ -257,6 +293,7 @@ attachSelectionHandlers();
 
 updateSyncStatus('connecting');
 readLocalSync();
+syncFromObservation();
 window.addEventListener('storage', (e) => {
   if (e.key !== 'observation_live_sync' || !e.newValue) return;
   try {

@@ -102,12 +102,12 @@ function buildNurseExpenseTable(tableId, leftItems, rightItems) {
     const right = rightItems[idx] || '';
     html += `
       <tr>
-        <td class="n-name">${left}</td>
+        <td class="n-name"><input class="n-name-input" type="text" value="${left}"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
-        <td class="n-name">${right}</td>
+        <td class="n-name"><input class="n-name-input" type="text" value="${right}"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
         <td class="n-qty"><input type="text"></td>
@@ -121,18 +121,27 @@ function buildNurseExpenseTable(tableId, leftItems, rightItems) {
 buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
 buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
 
+let lastSyncedMeds = [];
+
 function applyLiveSyncPayload(payload) {
   if (!payload) return;
   const passport = payload.passport || {};
   document.getElementById('nurseHistoryNo').value = passport.hist || '';
   document.getElementById('nurseDiagnosis').value = passport.icd || '';
+  document.getElementById('nurseFullName').value = passport.fullName || '';
   document.getElementById('nurseAdmissionDate').value = passport.admission || '';
 
   const meds = Array.isArray(payload.medications) ? payload.medications : [];
-  const nameCells = Array.from(document.querySelectorAll('#nurseExpense1 tr td.n-name'));
-  nameCells.forEach((cell, idx) => {
-    cell.textContent = meds[idx] || '';
+  const nameInputs = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input'));
+  nameInputs.forEach((inp, idx) => {
+    const current = inp.value.trim();
+    const oldSynced = lastSyncedMeds[idx] || '';
+    const nextSynced = meds[idx] || '';
+    if (!current || current === oldSynced) {
+      inp.value = nextSynced;
+    }
   });
+  lastSyncedMeds = meds.slice(0, nameInputs.length);
 }
 
 function readLocalSync() {

@@ -122,6 +122,17 @@ body {
   padding: 0 6px;
   font-weight: 600;
 }
+.nurse-sheet .n-name .n-name-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 12pt;
+  font-weight: 600;
+  text-align: left;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
 
 .nurse-sheet .n-qty input {
   width: 100%;
@@ -157,7 +168,8 @@ input.selected-cell {
   }
   .nurse-sheet th,
   .nurse-sheet td,
-  .nurse-sheet .n-qty input {
+  .nurse-sheet .n-qty input,
+  .nurse-sheet .n-name .n-name-input {
     font-size: 10pt !important;
   }
 }

@@ -195,7 +195,8 @@
     @page { size: A4 landscape; margin:5mm !important; }
     body, .c { margin:0 !important; padding:0 !important; background:white !important; }
     .nav, #templateModal, #firebaseStatus, .nurse-tools { display:none !important; }
-    .page { display:block !important; page-break-after:always; padding:5mm !important; width:287mm; min-height:200mm; box-sizing:border-box; }
+    .page { display:block !important; page-break-after:always; padding:5mm !important; width:287mm; height:200mm; min-height:0; box-sizing:border-box; }
+    .page:last-child { page-break-after:auto !important; }
     input, select { border:none !important; background:transparent !important; }
 
     /* select-ის ისრების მოცილება საბეჭდზე */

@@ -100,28 +100,34 @@
   .signature-img { max-width:120px; max-height:32px; object-fit:contain; }
   .signature-img.missing { display:none; }
 
+  .nurse-pdf-page {
+    background:#fff;
+  }
+  .nurse-pdf-title {
+    text-align:center;
+    font-size:16pt;
+    font-weight:700;
+    line-height:1.35;
+    color:#000;
+    margin:2mm 0 5mm;
+  }
   .nurse-head {
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:8px 16px;
-    font-size:9pt;
-    margin-top:4px;
+    gap:4mm 10mm;
+    font-size:13pt;
+    margin:0 0 3mm;
   }
   .nurse-head .row { display:flex; gap:6px; align-items:center; }
-  .nurse-head label { font-weight:700; white-space:nowrap; }
+  .nurse-head label { font-weight:700; white-space:nowrap; color:#000; }
   .nurse-head input {
     flex:1;
-    border:1px solid #666;
-    border-radius:4px;
-    padding:2px 4px;
-    font-size:9pt;
-  }
-  .nurse-title {
-    margin:8px 0 4px;
-    text-align:center;
-    font-weight:700;
-    color:#1e40af;
-    font-size:10pt;
+    border:none;
+    border-bottom:1px solid #000;
+    border-radius:0;
+    padding:0 2px 1px;
+    font-size:13pt;
+    background:transparent;
   }
   .nurse-tools {
     display:flex;
@@ -129,23 +135,37 @@
     margin:4px 0 6px;
   }
   .nurse-sheet th, .nurse-sheet td {
-    font-size:8pt;
-    padding:3px 4px;
+    font-size:12pt;
+    padding:0;
+    border:1px solid #555;
+    height:11mm;
+    color:#000;
+    background:#fff;
   }
-  .nurse-sheet .n-name { text-align:left; }
-  .nurse-sheet .n-qty input,
-  .nurse-sheet .n-med-qty input {
+  .nurse-sheet th {
+    text-align:center;
+    font-weight:700;
+    background:#fff;
+    color:#000;
+  }
+  .nurse-sheet .n-name {
+    text-align:left;
+    padding:0 6px;
+    font-weight:600;
+  }
+  .nurse-sheet .n-qty input {
     width:100%;
+    height:100%;
     border:none;
     text-align:center;
     background:transparent;
-    font-size:8pt;
+    font-size:12pt;
+    padding:0;
   }
-  .nurse-med-title {
-    margin-top:6px;
-    font-size:9pt;
-    font-weight:700;
-    color:#1e40af;
+  .nurse-sheet {
+    width:86%;
+    margin:0 auto;
+    table-layout:fixed;
   }
 
   #templateName { width:150px; padding:5px; font-size:12px; }
@@ -184,7 +204,7 @@
   @media print {
     @page { size: A4 landscape; margin:5mm !important; }
     body, .c { margin:0 !important; padding:0 !important; background:white !important; }
-    .nav, #templateModal, #firebaseStatus { display:none !important; }
+    .nav, #templateModal, #firebaseStatus, .nurse-tools { display:none !important; }
     .page { display:block !important; page-break-after:always; padding:5mm !important; width:287mm; min-height:200mm; box-sizing:border-box; }
     input, select { border:none !important; background:transparent !important; }
 
@@ -200,7 +220,7 @@
     th, td { border:1px solid black !important; font-size:6.4pt !important; padding:1px !important; }
     .time { font-size:6pt !important; }
     .drug input, .dose input { font-size:6.3pt !important; }
-    .nurse-sheet th, .nurse-sheet td, .nurse-sheet .n-qty input, .nurse-sheet .n-med-qty input { font-size:7pt !important; }
+    .nurse-sheet th, .nurse-sheet td, .nurse-sheet .n-qty input { font-size:10pt !important; }
     .signature-img { max-height:26px !important; }
   }
 </style>
@@ -314,10 +334,9 @@
   </div>
 
   <!-- გვერდი 3: ექთნის ხარჯი (1) -->
-  <div class="page" id="p3">
-    <div class="pname">სტაციონარის პაციენტის ხარჯთაღრიცხვის ფურცელი</div>
+  <div class="page nurse-pdf-page" id="p3">
+    <div class="nurse-pdf-title">სტაციონარის პაციენტის ხარჯთაღრიცხვის<br>ფურცელი</div>
     <div class="nurse-head">
-      <div class="row"><label>პაციენტი:</label><input type="text" id="nursePatientName"></div>
       <div class="row"><label>ისტორიის №:</label><input type="text" id="nurseHistoryNo"></div>
       <div class="row"><label>დიაგნოზი:</label><input type="text" id="nurseDiagnosis"></div>
       <div class="row"><label>გაეწერა:</label><input type="date" id="nurseDischargeDate"></div>
@@ -326,45 +345,12 @@
     <div class="nurse-tools">
       <button class="btn" style="background:#0f766e;" onclick="syncNurseFromObservation()">სინქრონიზაცია</button>
     </div>
-
-    <div class="nurse-title">სამედიცინო სახარჯი მასალები (გვერდი 1)</div>
     <table id="nurseExpense1" class="nurse-sheet"></table>
-
-    <div class="sign">
-      <div style="text-align:center">
-        <div class="signature-wrap"><img class="signature-img" src="giorgi esign.png" alt="ექიმის ხელმოწერა" onerror="this.classList.add('missing')"></div>
-        <div class="line"></div>
-        <div>ექიმი</div>
-      </div>
-      <div style="text-align:center">
-        <div class="signature-wrap"><img class="signature-img" src="giorgi esign.png" alt="ექთნის ხელმოწერა" onerror="this.classList.add('missing')"></div>
-        <div class="line"></div>
-        <div>ექთანი</div>
-      </div>
-    </div>
   </div>
 
   <!-- გვერდი 4: ექთნის ხარჯი (2) -->
-  <div class="page" id="p4">
-    <div class="pname">სტაციონარის პაციენტის ხარჯთაღრიცხვის ფურცელი (გაგრძელება)</div>
-    <div class="nurse-title">სამედიცინო სახარჯი მასალები (გვერდი 2)</div>
+  <div class="page nurse-pdf-page" id="p4">
     <table id="nurseExpense2" class="nurse-sheet"></table>
-
-    <div class="nurse-med-title">მედიკამენტები (სინქრონიზაცია დაკვირვების ფურცლიდან)</div>
-    <table id="nurseMeds" class="nurse-sheet"></table>
-
-    <div class="sign">
-      <div style="text-align:center">
-        <div class="signature-wrap"><img class="signature-img" src="giorgi esign.png" alt="ექიმის ხელმოწერა" onerror="this.classList.add('missing')"></div>
-        <div class="line"></div>
-        <div>ექიმი</div>
-      </div>
-      <div style="text-align:center">
-        <div class="signature-wrap"><img class="signature-img" src="giorgi esign.png" alt="ექთნის ხელმოწერა" onerror="this.classList.add('missing')"></div>
-        <div class="line"></div>
-        <div>ექთანი</div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -447,47 +433,59 @@
 
   // საათობრივი ბადე
   const HOURS = [...Array(16).keys()].map(i => i + 9).concat([...Array(9).keys()].map(i => i + 1));
-  const SECTION_LABELS = new Set([
-    'ანტიბაქტერიული თერაპია',
-    'სედაცია',
-    'ბაზისური თერაპია',
-    'ვაზოპრესორი',
-    'insulini',
-    'შაქრის კონტროლი'
-  ]);
-  const NURSE_EXPENSE_PAIRS = [
-    ['არასტ.ხელთათმანი', 'წყალბ.ზეჟ'],
-    ['შპრიცი 2მლ', 'კერვა 2.0'],
-    ['შპრიცი 5მლ', 'ბეტაპადი'],
-    ['შპრიცი 10 მლ', 'შ.ბ.კ'],
-    ['შპრიცი 20მლ', 'ბეგი'],
-    ['პ.ვ.კ', 'კატეჟელე'],
-    ['პვკ ფიქსატორი', 'ნ/გ ზონდი'],
-    ['სისტემა', 'პამპერსის საფენი'],
-    ['სტოპკოკი', 'ჟანე'],
-    ['ეკგ ქაღალდი', 'იანკაუერი'],
-    ['ლიპუჩკა', '50მლ შპრიცი'],
-    ['გლუკ.ჩხირი', 'სპირტი'],
-    ['სისტემის დამაგრძ.', 'სანაციის მილი'],
-    ['ბინტი', 'სტ.ხალათი'],
-    ['პირბადე', 'სტ.ზეწარი'],
-    ['ერთ.ზეწარი', 'სკალპელი'],
-    ['ერთ.ქუდი', 'ბახილები'],
-    ['ე/ტ მილი', 'კონტური'],
-    ['ფილტრი', 'ც.ვ.კ 3 არხ'],
-    ['სტ.ხელთათმანი', 'ბეტადინი']
+  const NURSE_ROW_COUNT = 24;
+  const NURSE_LEFT_ITEMS = [
+    'არასტ.ხელთათმანი',
+    'შპრიცი 2მლ',
+    'შპრიცი 5მლ',
+    'შპრიცი 10 მლ',
+    'შპრიცი 20მლ',
+    'პ.ვ.კ',
+    'პვკ ფიქსატორი',
+    'სისტემა',
+    'სტოპკოკი',
+    'ეკგ ქაღალდი',
+    'ლიპუჩკა',
+    'გლუკ.ჩხირი',
+    'სპირტი',
+    'ბინტი',
+    'პირბადე',
+    'ერთ.ზეწარი',
+    'ერთ.ქუდი',
+    'ბახილები',
+    'ე/ტ მილი',
+    'კონტური',
+    'ფილტრი',
+    'ც.ვ.კ 3 არხ',
+    'სტ.ხელთათმანი',
+    'ბეტადინი'
   ];
-  const NURSE_EXPENSE_PAGE1 = NURSE_EXPENSE_PAIRS.slice(0, 10);
-  const NURSE_EXPENSE_PAGE2 = NURSE_EXPENSE_PAIRS.slice(10);
-
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const NURSE_RIGHT_ITEMS = [
+    'წყალბ.ზეჟ',
+    'კერვა 2.0',
+    'ბეტაპადი',
+    'შ.ბ.კ',
+    'ბეგი',
+    'კატეჟელე',
+    'ნ/გ ზონდი',
+    'პამპერსის საფენი',
+    'ჟანე',
+    'იანკაუერი',
+    '50მლ შპრიცი',
+    'სისტემის დამაგრძ.',
+    'სანაციის მილი',
+    'სტ.ხალათი',
+    'სტ.ზეწარი',
+    'სკალპელი',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    ''
+  ];
 
   function updName() {
     const name = document.getElementById('fullName').value.trim() || 'პაციენტის სახელი და გვარი';
@@ -515,32 +513,41 @@
   }
   document.getElementById('meds').innerHTML = medsHTML;
 
-  function buildNurseExpenseTable(pairs, tableId, startIndex) {
+  function buildNurseExpenseTable(tableId, leftItems, rightItems) {
     let html = `
+      <colgroup>
+        <col style="width:30%">
+        <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
+        <col style="width:30%">
+        <col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:5%">
+      </colgroup>
       <tr>
-        <th>დასახელება</th><th>რაოდენობა</th>
-        <th>დასახელება</th><th>რაოდენობა</th>
+        <th>დასახელება</th><th colspan="4">რაოდენობა</th>
+        <th>დასახელება</th><th colspan="4">რაოდენობა</th>
       </tr>
     `;
-    pairs.forEach((pair, idx) => {
-      const rowNo = startIndex + idx;
+    for (let idx = 0; idx < NURSE_ROW_COUNT; idx++) {
+      const left = leftItems[idx] || '';
+      const right = rightItems[idx] || '';
       html += `
         <tr>
-          <td class="n-name">${rowNo}. ${pair[0]}</td>
-          <td class="n-qty"><input type="text" data-nurse-expense="${rowNo - 1}-0"></td>
-          <td class="n-name">${rowNo}. ${pair[1]}</td>
-          <td class="n-qty"><input type="text" data-nurse-expense="${rowNo - 1}-1"></td>
+          <td class="n-name">${left}</td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l1"></td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l2"></td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l3"></td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-l4"></td>
+          <td class="n-name">${right}</td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r1"></td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r2"></td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r3"></td>
+          <td class="n-qty"><input class="n-exp-input" type="text" data-nurse-expense="${tableId}-${idx}-r4"></td>
         </tr>
       `;
-    });
+    }
     document.getElementById(tableId).innerHTML = html;
   }
-  buildNurseExpenseTable(NURSE_EXPENSE_PAGE1, 'nurseExpense1', 1);
-  buildNurseExpenseTable(NURSE_EXPENSE_PAGE2, 'nurseExpense2', 11);
-
-  document.getElementById('nurseMeds').innerHTML = `
-    <tr><th style="width:70px;">№</th><th>მედიკამენტი</th><th style="width:120px;">რაოდენობა</th></tr>
-  `;
+  buildNurseExpenseTable('nurseExpense1', Array(NURSE_ROW_COUNT).fill(''), Array(NURSE_ROW_COUNT).fill(''));
+  buildNurseExpenseTable('nurseExpense2', NURSE_LEFT_ITEMS, NURSE_RIGHT_ITEMS);
 
   // vitals
   const vit = ['პულსი','სისტ.','დიასტ.','MAP','ტ°','სუნთქვა','CVP','FiO2','SaO2'];
@@ -564,46 +571,9 @@
   });
   document.getElementById('other').innerHTML = othHTML;
 
-  function syncNurseMedsFromObservation(preservedQtyByName = new Map()) {
-    const medsRows = document.querySelectorAll('#meds tr:not(:first-child)');
-    const names = [];
-    medsRows.forEach(row => {
-      const val = row.cells[1].querySelector('input').value.trim();
-      if (!val) return;
-      if (SECTION_LABELS.has(val)) return;
-      names.push(val);
-    });
-    const uniqueNames = [...new Set(names)];
-    const table = document.getElementById('nurseMeds');
-    table.innerHTML = `<tr><th style="width:70px;">№</th><th>მედიკამენტი</th><th style="width:120px;">რაოდენობა</th></tr>`;
-    uniqueNames.forEach((name, idx) => {
-      const qty = preservedQtyByName.get(name) || '';
-      table.insertAdjacentHTML('beforeend', `
-        <tr>
-          <td>${idx + 1}</td>
-          <td class="n-name">${escapeHtml(name)}</td>
-          <td class="n-med-qty"><input type="text" data-nurse-med-name="${escapeHtml(name)}" value="${escapeHtml(qty)}"></td>
-        </tr>
-      `);
-    });
-    attachSelectionHandlers();
-  }
-
-  function captureNurseMedQuantities() {
-    const map = new Map();
-    document.querySelectorAll('#nurseMeds .n-med-qty input').forEach(inp => {
-      const name = inp.dataset.nurseMedName || '';
-      if (name) map.set(name, inp.value.trim());
-    });
-    return map;
-  }
-
   function syncNurseFromObservation() {
-    const qtyMap = captureNurseMedQuantities();
-    document.getElementById('nursePatientName').value = document.getElementById('fullName').value.trim();
     document.getElementById('nurseHistoryNo').value = document.getElementById('hist').value.trim();
     document.getElementById('nurseAdmissionDate').value = document.getElementById('admission').value;
-    syncNurseMedsFromObservation(qtyMap);
   }
   window.syncNurseFromObservation = syncNurseFromObservation;
 
@@ -1055,18 +1025,13 @@
     }));
 
     const nurseMeta = {
-      patientName: document.getElementById('nursePatientName').value.trim(),
       historyNo: document.getElementById('nurseHistoryNo').value.trim(),
       diagnosis: document.getElementById('nurseDiagnosis').value.trim(),
       dischargeDate: document.getElementById('nurseDischargeDate').value,
       admissionDate: document.getElementById('nurseAdmissionDate').value
     };
 
-    const nurseExpenseQty = Array.from(document.querySelectorAll('#nurseExpense1 .n-qty input, #nurseExpense2 .n-qty input')).map(i => i.value.trim());
-    const nurseMedsQty = Array.from(document.querySelectorAll('#nurseMeds .n-med-qty input')).map(i => ({
-      name: i.dataset.nurseMedName || '',
-      qty: i.value.trim()
-    }));
+    const nurseExpenseQty = Array.from(document.querySelectorAll('.n-exp-input')).map(i => i.value.trim());
 
     return {
       meds,
@@ -1075,8 +1040,7 @@
       other,
       nurse: {
         meta: nurseMeta,
-        expenseQty: nurseExpenseQty,
-        medsQty: nurseMedsQty
+        expenseQty: nurseExpenseQty
       }
     };
   }
@@ -1115,19 +1079,15 @@
     });
 
     if (data.nurse?.meta) {
-      document.getElementById('nursePatientName').value = data.nurse.meta.patientName || '';
       document.getElementById('nurseHistoryNo').value = data.nurse.meta.historyNo || '';
       document.getElementById('nurseDiagnosis').value = data.nurse.meta.diagnosis || '';
       document.getElementById('nurseDischargeDate').value = data.nurse.meta.dischargeDate || '';
       document.getElementById('nurseAdmissionDate').value = data.nurse.meta.admissionDate || '';
     }
 
-    document.querySelectorAll('#nurseExpense1 .n-qty input, #nurseExpense2 .n-qty input').forEach((inp, i) => {
+    document.querySelectorAll('.n-exp-input').forEach((inp, i) => {
       inp.value = data.nurse?.expenseQty?.[i] || '';
     });
-
-    const medsQtyMap = new Map((data.nurse?.medsQty || []).map(m => [m.name, m.qty]));
-    syncNurseMedsFromObservation(medsQtyMap);
 
     attachSelectionHandlers();
   }
@@ -1146,15 +1106,11 @@
     rows[32].querySelector('.drug input').value = 'insulini';
     rows[33].querySelector('.drug input').value = 'შაქრის კონტროლი';
 
-    document.getElementById('nursePatientName').value = '';
     document.getElementById('nurseHistoryNo').value = '';
     document.getElementById('nurseDiagnosis').value = '';
     document.getElementById('nurseDischargeDate').value = '';
     document.getElementById('nurseAdmissionDate').value = '';
-    document.querySelectorAll('#nurseExpense1 .n-qty input, #nurseExpense2 .n-qty input').forEach(inp => inp.value = '');
-    document.getElementById('nurseMeds').innerHTML = `
-      <tr><th style="width:70px;">№</th><th>მედიკამენტი</th><th style="width:120px;">რაოდენობა</th></tr>
-    `;
+    document.querySelectorAll('.n-exp-input').forEach(inp => inp.value = '');
 
     clearSelection();
     updName();

@@ -256,9 +256,11 @@ window.addEventListener('storage', (e) => {
 });
 
 onSnapshot(liveSyncRef, (snap) => {
+  updateSyncStatus('online');
   if (snap.exists()) {
     applyLiveSyncPayload(snap.data());
-    updateSyncStatus('online');
+  } else {
+    readLocalSync();
   }
 }, async () => {
   updateSyncStatus('offline');

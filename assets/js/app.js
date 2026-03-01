@@ -671,4 +671,3 @@
     updName();
     scheduleLiveSync();
   };
-</script>

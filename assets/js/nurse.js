@@ -499,9 +499,129 @@ function attachSelectionHandlers() {
 document.addEventListener('mouseup', () => { isSelecting = false; });
 attachSelectionHandlers();
 
+function copySelectedToClipboard() {
+  if (selectedInputs.size === 0) return Promise.resolve('');
+  const arr = Array.from(selectedInputs).filter(inp => inp.isConnected);
+  if (arr.length === 0) return Promise.resolve('');
+
+  const firstPos = getCellPosition(arr[0]);
+  if (!firstPos) return Promise.resolve('');
+
+  const positions = arr
+    .map(inp => {
+      const pos = getCellPosition(inp);
+      return pos && pos.table === firstPos.table ? { input: inp, ...pos } : null;
+    })
+    .filter(Boolean);
+
+  if (!positions.length) return Promise.resolve('');
+
+  const minRow = Math.min(...positions.map(p => p.rowIndex));
+  const maxRow = Math.max(...positions.map(p => p.rowIndex));
+  const minCol = Math.min(...positions.map(p => p.cellIndex));
+  const maxCol = Math.max(...positions.map(p => p.cellIndex));
+
+  const rowsOut = [];
+  for (let r = minRow; r <= maxRow; r++) {
+    const colsOut = [];
+    for (let c = minCol; c <= maxCol; c++) {
+      const match = positions.find(p => p.rowIndex === r && p.cellIndex === c);
+      colsOut.push(match ? match.input.value : '');
+    }
+    rowsOut.push(colsOut.join('\t'));
+  }
+  const text = rowsOut.join('\n');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(() => text).catch(() => text);
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  return Promise.resolve(text);
+}
+
+function pasteTextGrid(text, startInput) {
+  const pos = getCellPosition(startInput);
+  if (!pos) {
+    startInput.value = text;
+    return;
+  }
+  const { table, rowIndex, cellIndex } = pos;
+  const tblRows = Array.from(table.rows);
+  const lines = text.replace(/\r/g, '').split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split('\t');
+    const targetRowIndex = rowIndex + i;
+    if (targetRowIndex >= tblRows.length) break;
+    const row = tblRows[targetRowIndex];
+    for (let j = 0; j < cols.length; j++) {
+      const targetCellIndex = cellIndex + j;
+      if (targetCellIndex >= row.cells.length) break;
+      const cell = row.cells[targetCellIndex];
+      const inp = cell.querySelector('input');
+      if (inp) inp.value = cols[j];
+    }
+  }
+}
+
+document.addEventListener('paste', function(e) {
+  const target = e.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (!e.clipboardData) return;
+
+  const text = e.clipboardData.getData('text');
+  if (text.includes('\n') || text.includes('\t')) {
+    e.preventDefault();
+    pasteTextGrid(text, target);
+  }
+});
+
 document.addEventListener('keydown', function(e) {
   const el = e.target;
-  if (!(el instanceof HTMLInputElement)) return;
+  const isInput = el instanceof HTMLInputElement;
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+    if (selectedInputs.size > 0) {
+      e.preventDefault();
+      copySelectedToClipboard();
+    }
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') {
+    if (selectedInputs.size > 0) {
+      e.preventDefault();
+      copySelectedToClipboard().finally(() => {
+        selectedInputs.forEach(inp => { inp.value = ''; });
+      });
+    }
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && isInput) {
+    const cell = el.closest('td,th');
+    const table = cell?.closest('table');
+    if (table) {
+      e.preventDefault();
+      clearSelection();
+      const inputs = table.querySelectorAll('input[type="text"], input[type="date"]');
+      inputs.forEach(inp => addToSelection(inp));
+    }
+    return;
+  }
+
+  if (e.key === 'Delete' && selectedInputs.size > 0) {
+    e.preventDefault();
+    selectedInputs.forEach(inp => { inp.value = ''; });
+    return;
+  }
+
+  if (!isInput) return;
   if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) return;
 
   const cell = el.closest('td,th');

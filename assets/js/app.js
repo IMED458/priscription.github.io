@@ -91,9 +91,6 @@
   const templatesBtn = document.getElementById('templatesBtn');
   const saveBtn = document.getElementById('saveBtn');
   const LIVE_SYNC_STORAGE_KEY = 'observation_live_sync';
-  const patientDraftStorageKey = patientDocRef
-    ? `observation_patient_sheet_${patientDocId}`
-    : '';
   const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
   const EXCLUDED_MEDICATION_NAMES = new Set([
     'ანტიბაქტერიული თერაპია',
@@ -105,8 +102,10 @@
   ]);
   let liveSyncTimer = null;
   let patientSaveTimer = null;
+  let historyLookupTimer = null;
   let patientSheetReady = !patientDocRef;
   let applyingPatientSheet = false;
+  let lastLoadedHistoryNumber = String(patientContext.history || '').trim();
 
   function updateFirebaseStatus(connected) {
     if (connected) {
@@ -193,16 +192,63 @@
     if (todayEl && !todayEl.value) todayEl.value = new Date().toISOString().split('T')[0];
   }
 
+  function normalizeHistoryNumber(value) {
+    return String(value || '').trim();
+  }
+
+  function getCurrentHistoryNumber() {
+    const histEl = document.getElementById('hist');
+    return normalizeHistoryNumber(histEl ? histEl.value : patientContext.history);
+  }
+
+  function buildHistoryDocId(historyNumber) {
+    const normalized = normalizeHistoryNumber(historyNumber);
+    return normalized ? `history_${encodeURIComponent(normalized)}` : '';
+  }
+
+  function getHistoryDocRef(historyNumber = getCurrentHistoryNumber()) {
+    const docId = buildHistoryDocId(historyNumber);
+    return docId ? doc(clinicDb, 'observation_sheets', docId) : null;
+  }
+
+  function getPatientDraftStorageKey(historyNumber = getCurrentHistoryNumber()) {
+    if (patientDocRef) return `observation_patient_sheet_${patientDocId}`;
+    const normalized = normalizeHistoryNumber(historyNumber);
+    return normalized ? `observation_history_sheet_${encodeURIComponent(normalized)}` : '';
+  }
+
+  function hasMeaningfulObservationData() {
+    const passport = getPassportData();
+    const headerKeys = ['fullName', 'gender', 'age', 'admission', 'icd', 'blood', 'room', 'allergy'];
+    if (headerKeys.some(key => Boolean(passport[key]))) return true;
+
+    const hasMedicationName = Array.from(document.querySelectorAll('#meds tr:not(:first-child) .drug input'))
+      .some(inp => {
+        const value = inp.value.trim();
+        return value && !EXCLUDED_MEDICATION_NAMES.has(value);
+      });
+    if (hasMedicationName) return true;
+
+    const hasMedicationDose = Array.from(document.querySelectorAll('#meds .dose input'))
+      .some(inp => inp.value.trim());
+    if (hasMedicationDose) return true;
+
+    return Array.from(document.querySelectorAll('#vitals input, #enteral input, #other input'))
+      .some(inp => inp.value.trim());
+  }
+
   function getPatientSheetPayload() {
+    const currentHistory = getCurrentHistoryNumber() || patientContext.history;
     return {
       header: getPassportData(),
       form: getFormData(),
+      historyNumber: currentHistory,
       patientContext: {
         pid: patientContext.pid,
         roomCollection: patientContext.roomCollection,
         fullName: patientContext.fullName,
         bed: patientContext.bed,
-        history: patientContext.history,
+        history: currentHistory,
         personalId: patientContext.personalId,
         dob: patientContext.dob,
         address: patientContext.address,
@@ -221,79 +267,135 @@
     if (data.header) setPassportData(data.header);
     applyFormData(data.form || data.payload || {});
     applyPatientDefaults({ preserveExisting: true });
+    lastLoadedHistoryNumber = normalizeHistoryNumber(data.historyNumber || data.header?.hist || '');
     applyingPatientSheet = false;
   }
 
-  function readPatientDraft() {
-    if (!patientDraftStorageKey) return null;
+  function readPatientDraft(historyNumber = getCurrentHistoryNumber()) {
+    const storageKey = getPatientDraftStorageKey(historyNumber);
+    if (!storageKey) return null;
     try {
-      const raw = localStorage.getItem(patientDraftStorageKey);
+      const raw = localStorage.getItem(storageKey);
       return raw ? JSON.parse(raw) : null;
     } catch (_) {
       return null;
     }
   }
 
-  function writePatientDraft(payload) {
-    if (!patientDraftStorageKey) return;
+  function writePatientDraft(payload, historyNumber = getCurrentHistoryNumber()) {
+    const storageKey = getPatientDraftStorageKey(historyNumber);
+    if (!storageKey) return;
     try {
-      localStorage.setItem(patientDraftStorageKey, JSON.stringify(payload));
+      localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch (_) {}
   }
 
-  async function savePatientSheetNow() {
-    if (!patientDocRef || applyingPatientSheet || !patientSheetReady) return;
-    const payload = getPatientSheetPayload();
-    writePatientDraft(payload);
+  async function loadHistorySheetPayload(historyNumber = getCurrentHistoryNumber()) {
+    const historyDocRef = getHistoryDocRef(historyNumber);
+    if (!historyDocRef) return null;
     try {
-      await setDoc(patientDocRef, {
+      const snap = await getDoc(historyDocRef);
+      return snap.exists() ? (snap.data()?.observation_sheet || null) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function savePatientSheetNow() {
+    if (applyingPatientSheet || !patientSheetReady) return;
+    const payload = getPatientSheetPayload();
+    lastLoadedHistoryNumber = normalizeHistoryNumber(payload.historyNumber);
+    writePatientDraft(payload, payload.historyNumber);
+    const writes = [];
+
+    if (patientDocRef) {
+      writes.push(setDoc(patientDocRef, {
         observation_sheet: {
           ...payload,
+          sheetType: 'patient',
           updatedAt: serverTimestamp()
         },
         observation_sheet_updated_at: serverTimestamp()
-      }, { merge: true });
+      }, { merge: true }));
+    }
+
+    const historyDocRef = getHistoryDocRef(payload.historyNumber);
+    if (historyDocRef) {
+      writes.push(setDoc(historyDocRef, {
+        observation_sheet: {
+          ...payload,
+          sheetType: 'history',
+          linkedPatientDocId: patientDocId || null,
+          updatedAt: serverTimestamp()
+        },
+        observation_sheet_updated_at: serverTimestamp()
+      }, { merge: true }));
+    }
+
+    if (!writes.length) return;
+    try {
+      await Promise.all(writes);
     } catch (err) {
       console.warn('Observation sheet save failed:', err);
     }
   }
 
   function schedulePatientSheetSave() {
-    if (!patientDocRef || applyingPatientSheet || !patientSheetReady) return;
+    if (applyingPatientSheet || !patientSheetReady) return;
+    if (!patientDocRef && !getCurrentHistoryNumber()) return;
     if (patientSaveTimer) clearTimeout(patientSaveTimer);
     patientSaveTimer = setTimeout(savePatientSheetNow, 450);
   }
 
+  async function hydrateByHistoryNumber(historyNumber, opts = {}) {
+    const normalized = normalizeHistoryNumber(historyNumber);
+    if (!normalized) return false;
+    if (!opts.force && normalized === lastLoadedHistoryNumber) return false;
+    if (!opts.force && hasMeaningfulObservationData()) return false;
+
+    const payload = await loadHistorySheetPayload(normalized) || readPatientDraft(normalized);
+    lastLoadedHistoryNumber = normalized;
+    if (!payload) return false;
+
+    applyPatientSheetPayload(payload);
+    return true;
+  }
+
+  function scheduleHistoryLookup() {
+    if (patientDocRef || applyingPatientSheet || !patientSheetReady) return;
+    if (historyLookupTimer) clearTimeout(historyLookupTimer);
+    historyLookupTimer = setTimeout(() => {
+      hydrateByHistoryNumber(getCurrentHistoryNumber());
+    }, 420);
+  }
+
   async function initializePatientSheet() {
     applyPatientDefaults({ preserveExisting: false });
-    if (!patientDocRef) {
-      patientSheetReady = true;
-      scheduleLiveSync();
-      return;
+    const initialHistory = getCurrentHistoryNumber() || patientContext.history;
+    const draftPayload = readPatientDraft(initialHistory);
+    let loadedPayload = null;
+
+    try {
+      if (patientDocRef) {
+        const snap = await getDoc(patientDocRef);
+        loadedPayload = snap.exists() ? (snap.data()?.observation_sheet || null) : null;
+      }
+      if (!loadedPayload) loadedPayload = await loadHistorySheetPayload(initialHistory);
+      if (!loadedPayload) loadedPayload = draftPayload;
+    } catch (err) {
+      console.warn('Observation sheet load failed:', err);
+      loadedPayload = loadedPayload || draftPayload;
     }
 
-    const draftPayload = readPatientDraft();
-    try {
-      const snap = await getDoc(patientDocRef);
-      const sheetPayload = snap.data()?.observation_sheet;
-      if (sheetPayload) {
-        applyPatientSheetPayload(sheetPayload);
-      } else if (draftPayload) {
-        applyPatientSheetPayload(draftPayload);
-      } else {
-        applyPatientDefaults({ preserveExisting: true });
-      }
-    } catch (err) {
-      if (draftPayload) {
-        applyPatientSheetPayload(draftPayload);
-      } else {
-        applyPatientDefaults({ preserveExisting: true });
-      }
-      console.warn('Observation sheet load failed:', err);
+    if (loadedPayload) {
+      applyPatientSheetPayload(loadedPayload);
+    } else {
+      applyPatientDefaults({ preserveExisting: true });
     }
 
     patientSheetReady = true;
     scheduleLiveSync();
+    if (loadedPayload && patientDocRef) schedulePatientSheetSave();
   }
 
   // მედიკაციების ცხრილი
@@ -367,10 +469,26 @@
     if (!el) return;
     el.addEventListener('input', () => {
       scheduleLiveSync();
+      if (id === 'hist' && !patientDocRef) {
+        if (hasMeaningfulObservationData()) {
+          schedulePatientSheetSave();
+        } else {
+          scheduleHistoryLookup();
+        }
+        return;
+      }
       schedulePatientSheetSave();
     });
     el.addEventListener('change', () => {
       scheduleLiveSync();
+      if (id === 'hist' && !patientDocRef) {
+        if (hasMeaningfulObservationData()) {
+          schedulePatientSheetSave();
+        } else {
+          scheduleHistoryLookup();
+        }
+        return;
+      }
       schedulePatientSheetSave();
     });
   });

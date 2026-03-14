@@ -6,6 +6,7 @@
     getDocs,
     getDocsFromServer,
     doc,
+    setDoc,
     deleteDoc,
     orderBy,
     query,
@@ -24,13 +25,75 @@
     measurementId: "G-1KMT8C3Q4E"
   };
 
+  const clinicFirebaseConfig = {
+    apiKey: "AIzaSyCDze1tz15HdKZVSPOPW_-7t-9ag4AiZYs",
+    authDomain: "clinic-inpatient.firebaseapp.com",
+    projectId: "clinic-inpatient",
+    storageBucket: "clinic-inpatient.firebasestorage.app",
+    messagingSenderId: "586729386322",
+    appId: "1:586729386322:web:17a92324784c2c988a4a8b"
+  };
+
   const app = initializeApp(firebaseConfig);
+  const clinicApp = initializeApp(clinicFirebaseConfig, 'clinic-inpatient-observation');
   const db = getFirestore(app);
+  const clinicDb = getFirestore(clinicApp);
+
+  const params = new URLSearchParams(window.location.search);
+  const decodeParam = key => decodeURIComponent(params.get(key) || '');
+  const normalizeRoomCollection = value => {
+    const normalized = String(value || '').trim();
+    if (!normalized) return '';
+    if (normalized === 'observation') return 'observation_room';
+    if (normalized === 'shock') return 'shock_room';
+    return normalized;
+  };
+  const parseAdmitDate = value => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const [datePart = ''] = raw.split('T');
+    return datePart;
+  };
+  const calcAge = value => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const dob = new Date(raw);
+    if (Number.isNaN(dob.getTime())) return '';
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
+    return age >= 0 ? String(age) : '';
+  };
+
+  const patientContext = {
+    pid: params.get('pid') || '',
+    roomCollection: normalizeRoomCollection(params.get('room')),
+    fullName: decodeParam('name'),
+    bed: decodeParam('bed'),
+    history: decodeParam('history'),
+    personalId: decodeParam('personal_id'),
+    dob: decodeParam('dob'),
+    address: decodeParam('address'),
+    admitDate: parseAdmitDate(decodeParam('admit_dt')),
+    doctor: decodeParam('doctor'),
+    icd: decodeParam('icd10_code') || decodeParam('icd'),
+    department: decodeParam('dept') || 'ER'
+  };
+  const patientDocId = patientContext.pid && patientContext.roomCollection
+    ? `${patientContext.roomCollection}_${patientContext.pid}`
+    : '';
+  const patientDocRef = patientContext.pid && patientContext.roomCollection
+    ? doc(clinicDb, 'observation_sheets', patientDocId)
+    : null;
 
   const statusEl = document.getElementById('firebaseStatus');
   const templatesBtn = document.getElementById('templatesBtn');
   const saveBtn = document.getElementById('saveBtn');
   const LIVE_SYNC_STORAGE_KEY = 'observation_live_sync';
+  const patientDraftStorageKey = patientDocRef
+    ? `observation_patient_sheet_${patientDocId}`
+    : '';
   const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
   const EXCLUDED_MEDICATION_NAMES = new Set([
     'ანტიბაქტერიული თერაპია',
@@ -41,6 +104,9 @@
     'შაქრის კონტროლი'
   ]);
   let liveSyncTimer = null;
+  let patientSaveTimer = null;
+  let patientSheetReady = !patientDocRef;
+  let applyingPatientSheet = false;
 
   function updateFirebaseStatus(connected) {
     if (connected) {
@@ -82,6 +148,153 @@
     if (n2) n2.textContent = name;
   }
   window.updName = updName;
+
+  function getPassportData() {
+    const passport = {};
+    PASSPORT_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      passport[id] = el ? (el.value ?? '').toString().trim() : '';
+    });
+    return passport;
+  }
+
+  function setPassportData(data, opts = {}) {
+    const preserveExisting = Boolean(opts.preserveExisting);
+    PASSPORT_IDS.forEach(id => {
+      if (!(id in (data || {}))) return;
+      const el = document.getElementById(id);
+      if (!el) return;
+      const currentValue = (el.value ?? '').toString().trim();
+      const nextValue = (data?.[id] ?? '').toString();
+      if (preserveExisting && currentValue) return;
+      el.value = nextValue;
+    });
+    updName();
+  }
+
+  function applyPatientDefaults(opts = {}) {
+    const preserveExisting = Boolean(opts.preserveExisting);
+    const defaults = {
+      fullName: patientContext.fullName,
+      hist: patientContext.history,
+      age: calcAge(patientContext.dob),
+      admission: patientContext.admitDate,
+      icd: patientContext.icd,
+      dept: patientContext.department || 'ER',
+      room: patientContext.bed
+    };
+    if (!preserveExisting) {
+      defaults.today = new Date().toISOString().split('T')[0];
+    }
+    setPassportData(defaults, { preserveExisting });
+    const deptEl = document.getElementById('dept');
+    if (deptEl && !deptEl.value.trim()) deptEl.value = 'ER';
+    const todayEl = document.getElementById('today');
+    if (todayEl && !todayEl.value) todayEl.value = new Date().toISOString().split('T')[0];
+  }
+
+  function getPatientSheetPayload() {
+    return {
+      header: getPassportData(),
+      form: getFormData(),
+      patientContext: {
+        pid: patientContext.pid,
+        roomCollection: patientContext.roomCollection,
+        fullName: patientContext.fullName,
+        bed: patientContext.bed,
+        history: patientContext.history,
+        personalId: patientContext.personalId,
+        dob: patientContext.dob,
+        address: patientContext.address,
+        admitDate: patientContext.admitDate,
+        doctor: patientContext.doctor,
+        icd: patientContext.icd,
+        department: patientContext.department || 'ER'
+      },
+      updatedAtMs: Date.now()
+    };
+  }
+
+  function applyPatientSheetPayload(data) {
+    if (!data) return;
+    applyingPatientSheet = true;
+    if (data.header) setPassportData(data.header);
+    applyFormData(data.form || data.payload || {});
+    applyPatientDefaults({ preserveExisting: true });
+    applyingPatientSheet = false;
+  }
+
+  function readPatientDraft() {
+    if (!patientDraftStorageKey) return null;
+    try {
+      const raw = localStorage.getItem(patientDraftStorageKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writePatientDraft(payload) {
+    if (!patientDraftStorageKey) return;
+    try {
+      localStorage.setItem(patientDraftStorageKey, JSON.stringify(payload));
+    } catch (_) {}
+  }
+
+  async function savePatientSheetNow() {
+    if (!patientDocRef || applyingPatientSheet || !patientSheetReady) return;
+    const payload = getPatientSheetPayload();
+    writePatientDraft(payload);
+    try {
+      await setDoc(patientDocRef, {
+        observation_sheet: {
+          ...payload,
+          updatedAt: serverTimestamp()
+        },
+        observation_sheet_updated_at: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Observation sheet save failed:', err);
+    }
+  }
+
+  function schedulePatientSheetSave() {
+    if (!patientDocRef || applyingPatientSheet || !patientSheetReady) return;
+    if (patientSaveTimer) clearTimeout(patientSaveTimer);
+    patientSaveTimer = setTimeout(savePatientSheetNow, 450);
+  }
+
+  async function initializePatientSheet() {
+    applyPatientDefaults({ preserveExisting: false });
+    if (!patientDocRef) {
+      patientSheetReady = true;
+      scheduleLiveSync();
+      return;
+    }
+
+    const draftPayload = readPatientDraft();
+    try {
+      const snap = await getDoc(patientDocRef);
+      const sheetPayload = snap.data()?.observation_sheet;
+      if (sheetPayload) {
+        applyPatientSheetPayload(sheetPayload);
+      } else if (draftPayload) {
+        applyPatientSheetPayload(draftPayload);
+      } else {
+        applyPatientDefaults({ preserveExisting: true });
+      }
+    } catch (err) {
+      if (draftPayload) {
+        applyPatientSheetPayload(draftPayload);
+      } else {
+        applyPatientDefaults({ preserveExisting: true });
+      }
+      console.warn('Observation sheet load failed:', err);
+    }
+
+    patientSheetReady = true;
+    scheduleLiveSync();
+  }
 
   // მედიკაციების ცხრილი
   let medsHTML = `<tr><th class="num">№</th><th class="drug">ინფუზიური-ტრანსფ.თერაპია</th>${HOURS.map(h => `<th class="time">${h}</th>`).join('')}</tr>`;
@@ -126,18 +339,12 @@
   document.getElementById('other').innerHTML = othHTML;
 
   function collectLiveSyncPayload() {
-    const passport = {};
-    PASSPORT_IDS.forEach(id => {
-      const el = document.getElementById(id);
-      passport[id] = el ? (el.value ?? '').toString().trim() : '';
-    });
-
     const medications = Array.from(document.querySelectorAll('#meds tr:not(:first-child) .drug input'))
       .map(inp => inp.value.trim())
       .filter(name => name && !EXCLUDED_MEDICATION_NAMES.has(name));
 
     return {
-      passport,
+      passport: getPassportData(),
       medications,
       updatedAtMs: Date.now()
     };
@@ -155,20 +362,26 @@
     liveSyncTimer = setTimeout(pushLiveSyncNow, 300);
   }
 
-  document.getElementById('today').value = new Date().toISOString().split('T')[0];
-  updName();
-  scheduleLiveSync();
-
   PASSPORT_IDS.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input', scheduleLiveSync);
-    el.addEventListener('change', scheduleLiveSync);
+    el.addEventListener('input', () => {
+      scheduleLiveSync();
+      schedulePatientSheetSave();
+    });
+    el.addEventListener('change', () => {
+      scheduleLiveSync();
+      schedulePatientSheetSave();
+    });
   });
   document.getElementById('meds').addEventListener('input', (e) => {
-    if (!e.target.matches('.drug input')) return;
+    if (!(e.target instanceof HTMLInputElement)) return;
     scheduleLiveSync();
+    schedulePatientSheetSave();
   });
+  document.getElementById('vitals').addEventListener('input', schedulePatientSheetSave);
+  document.getElementById('enteral').addEventListener('input', schedulePatientSheetSave);
+  document.getElementById('other').addEventListener('input', schedulePatientSheetSave);
 
   // გვერდების გადართვა
   document.querySelectorAll('[data-page]').forEach(btn => {
@@ -657,13 +870,13 @@
 
     attachSelectionHandlers();
     scheduleLiveSync();
+    schedulePatientSheetSave();
   }
 
   window.clearAll = function() {
     if (!confirm('გსურთ ყველაფრის გასუფთავება?')) return;
     document.querySelectorAll('input[type=text], input[type=number], input[type=date]').forEach(el => el.value = '');
     document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
-    document.getElementById('today').value = new Date().toISOString().split('T')[0];
 
     const rows = document.querySelectorAll('#meds tr:not(:first-child)');
     rows[5].querySelector('.drug input').value = 'ანტიბაქტერიული თერაპია';
@@ -674,6 +887,10 @@
     rows[33].querySelector('.drug input').value = 'შაქრის კონტროლი';
 
     clearSelection();
+    applyPatientDefaults({ preserveExisting: false });
     updName();
     scheduleLiveSync();
+    schedulePatientSheetSave();
   };
+
+  initializePatientSheet();

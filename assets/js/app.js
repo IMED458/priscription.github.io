@@ -89,7 +89,8 @@
 
   const statusEl = document.getElementById('firebaseStatus');
   const templatesBtn = document.getElementById('templatesBtn');
-  const saveBtn = document.getElementById('saveBtn');
+  const templateSaveBtn = document.getElementById('templateSaveBtn');
+  const patientSaveBtn = document.getElementById('patientSaveBtn');
   const LIVE_SYNC_STORAGE_KEY = 'observation_live_sync';
   const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
   const EXCLUDED_MEDICATION_NAMES = new Set([
@@ -106,19 +107,32 @@
   let patientSheetReady = !patientDocRef;
   let applyingPatientSheet = false;
   let lastLoadedHistoryNumber = String(patientContext.history || '').trim();
+  let patientSaveFeedbackTimer = null;
 
   function updateFirebaseStatus(connected) {
     if (connected) {
       statusEl.textContent = "Firebase ხელმისაწვდომია - შაბლონები მუშაობს";
       statusEl.className = "status-online";
       templatesBtn.classList.remove('disabled');
-      saveBtn.classList.remove('disabled');
+      templateSaveBtn.classList.remove('disabled');
     } else {
       statusEl.textContent = "ოფლაინ რეჟიმი - შაბლონები მიუწვდომელია, local გადატანა მუშაობს";
       statusEl.className = "status-offline";
       templatesBtn.classList.add('disabled');
-      saveBtn.classList.add('disabled');
+      templateSaveBtn.classList.add('disabled');
     }
+  }
+
+  function resetPatientSaveButton() {
+    if (!patientSaveBtn) return;
+    patientSaveBtn.textContent = 'სეივი';
+  }
+
+  function flashPatientSaveFeedback(text) {
+    if (!patientSaveBtn) return;
+    patientSaveBtn.textContent = text;
+    if (patientSaveFeedbackTimer) clearTimeout(patientSaveFeedbackTimer);
+    patientSaveFeedbackTimer = setTimeout(resetPatientSaveButton, 1800);
   }
 
   async function checkFirebaseConnection() {
@@ -301,9 +315,14 @@
     }
   }
 
-  async function savePatientSheetNow() {
-    if (applyingPatientSheet || !patientSheetReady) return;
+  async function savePatientSheetNow(opts = {}) {
+    if (applyingPatientSheet || !patientSheetReady) {
+      return { ok: false, reason: 'not-ready' };
+    }
     const payload = getPatientSheetPayload();
+    if (!patientDocRef && !normalizeHistoryNumber(payload.historyNumber)) {
+      return { ok: false, reason: 'missing-history' };
+    }
     lastLoadedHistoryNumber = normalizeHistoryNumber(payload.historyNumber);
     writePatientDraft(payload, payload.historyNumber);
     const writes = [];
@@ -332,11 +351,15 @@
       }, { merge: true }));
     }
 
-    if (!writes.length) return;
+    if (!writes.length) {
+      return { ok: true, localOnly: true, reason: 'local-only' };
+    }
     try {
       await Promise.all(writes);
+      return { ok: true, localOnly: false };
     } catch (err) {
       console.warn('Observation sheet save failed:', err);
+      return { ok: true, localOnly: true, reason: 'offline' };
     }
   }
 
@@ -344,7 +367,9 @@
     if (applyingPatientSheet || !patientSheetReady) return;
     if (!patientDocRef && !getCurrentHistoryNumber()) return;
     if (patientSaveTimer) clearTimeout(patientSaveTimer);
-    patientSaveTimer = setTimeout(savePatientSheetNow, 450);
+    patientSaveTimer = setTimeout(() => {
+      savePatientSheetNow();
+    }, 450);
   }
 
   async function hydrateByHistoryNumber(historyNumber, opts = {}) {
@@ -368,6 +393,32 @@
       hydrateByHistoryNumber(getCurrentHistoryNumber());
     }, 420);
   }
+
+  window.savePatientSheet = async function(manual = false) {
+    if (patientSaveTimer) {
+      clearTimeout(patientSaveTimer);
+      patientSaveTimer = null;
+    }
+    const result = await savePatientSheetNow({ manual });
+    if (!manual) return result;
+
+    if (!result.ok && result.reason === 'missing-history') {
+      flashPatientSaveFeedback('ისტორია?');
+      alert('შეიყვანეთ ისტორიის ნომერი ან გახსენით ფურცელი პაციენტიდან.');
+      return result;
+    }
+    if (!result.ok) {
+      flashPatientSaveFeedback('ვერ შეინახა');
+      alert('შენახვა ვერ შესრულდა. სცადეთ თავიდან.');
+      return result;
+    }
+
+    flashPatientSaveFeedback(result.localOnly ? 'ლოკალურად შეინახა' : 'შენახულია');
+    if (result.localOnly) {
+      alert('ინფორმაცია ლოკალურად შეინახა. ინტერნეტის აღდგენის შემდეგ ხელახლა დააჭირეთ სეივს.');
+    }
+    return result;
+  };
 
   async function initializePatientSheet() {
     applyPatientDefaults({ preserveExisting: false });
@@ -896,7 +947,7 @@
   };
 
   window.saveTemplate = async function() {
-    if (saveBtn.classList.contains('disabled')) {
+    if (templateSaveBtn.classList.contains('disabled')) {
       alert("ინტერნეტი არ არის — შენახვა შეუძლებელია");
       return;
     }

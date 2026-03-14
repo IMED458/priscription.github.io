@@ -21,9 +21,10 @@
     <button class="btn" data-page="2">2</button>
     <button class="btn" onclick="window.open('nurse.html', '_blank', 'noopener')">ექთანი</button>
     <button class="btn print" onclick="window.print()">ბეჭდვა</button>
+    <button class="btn save-sheet" id="patientSaveBtn" onclick="savePatientSheet(true)">სეივი</button>
     
     <input type="text" id="templateName" placeholder="შაბლონის სახელი">
-    <button class="btn" id="saveBtn" onclick="saveTemplate()">შენახვა</button>
+    <button class="btn" id="templateSaveBtn" onclick="saveTemplate()">შაბლონის შენახვა</button>
     
     <button class="btn" id="templatesBtn" onclick="openTemplateModal()" style="background:#7c3aed;">შაბლონები</button>
     

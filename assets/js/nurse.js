@@ -151,7 +151,8 @@ function initializeDateFields() {
   document.querySelectorAll('.date-field').forEach(el => {
     if (!(el instanceof HTMLInputElement) || el.dataset.dateBound === '1') return;
     el.value = normalizeDisplayDate(el.value);
-    el.addEventListener('input', () => {
+    el.addEventListener('input', event => {
+      if (event?.inputType?.startsWith('delete')) return;
       const nextValue = formatTypedDate(el.value);
       if (nextValue !== el.value) el.value = nextValue;
     });

@@ -87,6 +87,82 @@ const NURSE_RIGHT_ITEMS = [
   '', '', '', '', '', '', '', ''
 ];
 
+function padDatePart(value) {
+  return String(value || '').padStart(2, '0');
+}
+
+function formatTypedDate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    return `${padDatePart(isoMatch[3])}.${padDatePart(isoMatch[2])}.${isoMatch[1]}`;
+  }
+  const yearFirstMatch = raw.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
+  if (yearFirstMatch) {
+    return `${padDatePart(yearFirstMatch[3])}.${padDatePart(yearFirstMatch[2])}.${yearFirstMatch[1]}`;
+  }
+
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  if (!digits) return '';
+  if (digits.length === 8 && /^(19|20)\d{6}$/.test(digits)) {
+    return `${digits.slice(6, 8)}.${digits.slice(4, 6)}.${digits.slice(0, 4)}`;
+  }
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+}
+
+function normalizeDisplayDate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const [datePart = ''] = raw.split('T');
+  const normalized = datePart.trim();
+  if (!normalized) return '';
+
+  const isoMatch = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    return `${padDatePart(isoMatch[3])}.${padDatePart(isoMatch[2])}.${isoMatch[1]}`;
+  }
+  const yearFirstMatch = normalized.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
+  if (yearFirstMatch) {
+    return `${padDatePart(yearFirstMatch[3])}.${padDatePart(yearFirstMatch[2])}.${yearFirstMatch[1]}`;
+  }
+
+  const partsMatch = normalized.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+  if (partsMatch) {
+    const year = partsMatch[3].length === 2 ? `20${partsMatch[3]}` : partsMatch[3];
+    return `${padDatePart(partsMatch[1])}.${padDatePart(partsMatch[2])}.${year}`;
+  }
+
+  const digits = normalized.replace(/\D/g, '');
+  if (digits.length === 8) {
+    if (/^(19|20)\d{6}$/.test(digits)) {
+      return `${digits.slice(6, 8)}.${digits.slice(4, 6)}.${digits.slice(0, 4)}`;
+    }
+    return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4, 8)}`;
+  }
+
+  return formatTypedDate(normalized);
+}
+
+function initializeDateFields() {
+  document.querySelectorAll('.date-field').forEach(el => {
+    if (!(el instanceof HTMLInputElement) || el.dataset.dateBound === '1') return;
+    el.value = normalizeDisplayDate(el.value);
+    el.addEventListener('input', () => {
+      const nextValue = formatTypedDate(el.value);
+      if (nextValue !== el.value) el.value = nextValue;
+    });
+    el.addEventListener('blur', () => {
+      const nextValue = normalizeDisplayDate(el.value);
+      if (nextValue !== el.value) el.value = nextValue;
+    });
+    el.dataset.dateBound = '1';
+  });
+}
+
 function updateSyncStatus(mode) {
   if (!statusEl) return;
   if (mode === 'online') {
@@ -190,7 +266,7 @@ function applyLiveSyncPayload(payload) {
   document.getElementById('nurseHistoryNo').value = passport.hist || '';
   document.getElementById('nurseDiagnosis').value = passport.icd || '';
   document.getElementById('nurseFullName').value = passport.fullName || '';
-  document.getElementById('nurseAdmissionDate').value = passport.admission || '';
+  document.getElementById('nurseAdmissionDate').value = normalizeDisplayDate(passport.admission || '');
 
   const meds = (Array.isArray(payload.medications) ? payload.medications : [])
     .map(extractMedicationName)
@@ -229,7 +305,7 @@ function getNurseTemplatePayload() {
       historyNo: document.getElementById('nurseHistoryNo').value.trim(),
       diagnosis: document.getElementById('nurseDiagnosis').value.trim(),
       fullName: document.getElementById('nurseFullName').value.trim(),
-      admissionDate: document.getElementById('nurseAdmissionDate').value
+      admissionDate: normalizeDisplayDate(document.getElementById('nurseAdmissionDate').value)
     },
     namesPage1,
     namesPage2,
@@ -260,7 +336,7 @@ function applyNurseTemplatePayload(data, opts = {}) {
     document.getElementById('nurseHistoryNo').value = data.header.historyNo || '';
     document.getElementById('nurseDiagnosis').value = data.header.diagnosis || '';
     document.getElementById('nurseFullName').value = data.header.fullName || '';
-    document.getElementById('nurseAdmissionDate').value = data.header.admissionDate || '';
+    document.getElementById('nurseAdmissionDate').value = normalizeDisplayDate(data.header.admissionDate || '');
   }
 
   if (!onlySecondPage) {
@@ -776,6 +852,7 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => updateSyncStatus('offline'));
 
 checkFirebaseConnection();
+initializeDateFields();
 readLocalSync();
 pushHistorySnapshot(true);
 window.addEventListener('storage', (e) => {

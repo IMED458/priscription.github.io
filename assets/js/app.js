@@ -48,12 +48,81 @@
     if (normalized === 'shock') return 'shock_room';
     return normalized;
   };
-  const parseAdmitDate = value => {
+  const padDatePart = value => String(value || '').padStart(2, '0');
+  const formatTypedDate = value => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (isoMatch) {
+      return `${padDatePart(isoMatch[3])}.${padDatePart(isoMatch[2])}.${isoMatch[1]}`;
+    }
+    const yearFirstMatch = raw.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
+    if (yearFirstMatch) {
+      return `${padDatePart(yearFirstMatch[3])}.${padDatePart(yearFirstMatch[2])}.${yearFirstMatch[1]}`;
+    }
+
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    if (!digits) return '';
+    if (digits.length === 8 && /^(19|20)\d{6}$/.test(digits)) {
+      return `${digits.slice(6, 8)}.${digits.slice(4, 6)}.${digits.slice(0, 4)}`;
+    }
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+  };
+  const normalizeDisplayDate = value => {
     const raw = String(value || '').trim();
     if (!raw) return '';
     const [datePart = ''] = raw.split('T');
-    return datePart;
+    const normalized = datePart.trim();
+    if (!normalized) return '';
+
+    const isoMatch = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (isoMatch) {
+      return `${padDatePart(isoMatch[3])}.${padDatePart(isoMatch[2])}.${isoMatch[1]}`;
+    }
+    const yearFirstMatch = normalized.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
+    if (yearFirstMatch) {
+      return `${padDatePart(yearFirstMatch[3])}.${padDatePart(yearFirstMatch[2])}.${yearFirstMatch[1]}`;
+    }
+
+    const partsMatch = normalized.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+    if (partsMatch) {
+      const year = partsMatch[3].length === 2 ? `20${partsMatch[3]}` : partsMatch[3];
+      return `${padDatePart(partsMatch[1])}.${padDatePart(partsMatch[2])}.${year}`;
+    }
+
+    const digits = normalized.replace(/\D/g, '');
+    if (digits.length === 8) {
+      if (/^(19|20)\d{6}$/.test(digits)) {
+        return `${digits.slice(6, 8)}.${digits.slice(4, 6)}.${digits.slice(0, 4)}`;
+      }
+      return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4, 8)}`;
+    }
+
+    return formatTypedDate(normalized);
   };
+  const todayDisplay = () => {
+    const now = new Date();
+    return `${padDatePart(now.getDate())}.${padDatePart(now.getMonth() + 1)}.${now.getFullYear()}`;
+  };
+  const initializeDateFields = () => {
+    document.querySelectorAll('.date-field').forEach(el => {
+      if (!(el instanceof HTMLInputElement) || el.dataset.dateBound === '1') return;
+      el.value = normalizeDisplayDate(el.value);
+      el.addEventListener('input', () => {
+        const nextValue = formatTypedDate(el.value);
+        if (nextValue !== el.value) el.value = nextValue;
+      });
+      el.addEventListener('blur', () => {
+        const nextValue = normalizeDisplayDate(el.value);
+        if (nextValue !== el.value) el.value = nextValue;
+      });
+      el.dataset.dateBound = '1';
+    });
+  };
+  const parseAdmitDate = value => normalizeDisplayDate(value);
   const calcAge = value => {
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -93,6 +162,7 @@
   const patientSaveBtn = document.getElementById('patientSaveBtn');
   const LIVE_SYNC_STORAGE_KEY = 'observation_live_sync';
   const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
+  const DATE_FIELD_IDS = new Set(['admission', 'today']);
   const EXCLUDED_MEDICATION_NAMES = new Set([
     'ანტიბაქტერიული თერაპია',
     'სედაცია',
@@ -166,7 +236,8 @@
     const passport = {};
     PASSPORT_IDS.forEach(id => {
       const el = document.getElementById(id);
-      passport[id] = el ? (el.value ?? '').toString().trim() : '';
+      const rawValue = el ? (el.value ?? '').toString().trim() : '';
+      passport[id] = DATE_FIELD_IDS.has(id) ? normalizeDisplayDate(rawValue) : rawValue;
     });
     return passport;
   }
@@ -178,7 +249,8 @@
       const el = document.getElementById(id);
       if (!el) return;
       const currentValue = (el.value ?? '').toString().trim();
-      const nextValue = (data?.[id] ?? '').toString();
+      const rawNextValue = (data?.[id] ?? '').toString();
+      const nextValue = DATE_FIELD_IDS.has(id) ? normalizeDisplayDate(rawNextValue) : rawNextValue;
       if (preserveExisting && currentValue) return;
       el.value = nextValue;
     });
@@ -197,13 +269,13 @@
       room: patientContext.bed
     };
     if (!preserveExisting) {
-      defaults.today = new Date().toISOString().split('T')[0];
+      defaults.today = todayDisplay();
     }
     setPassportData(defaults, { preserveExisting });
     const deptEl = document.getElementById('dept');
     if (deptEl && !deptEl.value.trim()) deptEl.value = 'ER';
     const todayEl = document.getElementById('today');
-    if (todayEl && !todayEl.value) todayEl.value = new Date().toISOString().split('T')[0];
+    if (todayEl && !todayEl.value) todayEl.value = todayDisplay();
   }
 
   function normalizeHistoryNumber(value) {
@@ -1062,4 +1134,5 @@
     schedulePatientSheetSave();
   };
 
+  initializeDateFields();
   initializePatientSheet();

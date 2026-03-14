@@ -4,13 +4,14 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDocsFromServer,
   deleteDoc,
   query,
   orderBy,
+  limit,
   serverTimestamp,
   doc,
-  getDoc,
-  onSnapshot
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -25,7 +26,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const liveSyncRef = doc(db, "observation_live", "current");
+const LIVE_SYNC_STORAGE_KEY = 'observation_live_sync';
 const statusEl = document.getElementById('firebaseStatus');
 const nurseTemplateNameEl = document.getElementById('nurseTemplateName');
 const nurseSaveBtn = document.getElementById('nurseSaveBtn');
@@ -89,23 +90,33 @@ const NURSE_RIGHT_ITEMS = [
 function updateSyncStatus(mode) {
   if (!statusEl) return;
   if (mode === 'online') {
-    statusEl.textContent = 'Firebase სინქი აქტიურია';
+    statusEl.textContent = 'Firebase ხელმისაწვდომია - შაბლონები მუშაობს';
     statusEl.className = 'status-online';
     nurseSaveBtn?.classList.remove('disabled');
     nurseTemplatesBtn?.classList.remove('disabled');
     return;
   }
   if (mode === 'offline') {
-    statusEl.textContent = 'Firestore მიუწვდომელია (local სინქი)';
+    statusEl.textContent = 'ოფლაინ რეჟიმი - local შევსება მუშაობს, შაბლონები მიუწვდომელია';
     statusEl.className = 'status-offline';
     nurseSaveBtn?.classList.add('disabled');
     nurseTemplatesBtn?.classList.add('disabled');
     return;
   }
-  statusEl.textContent = 'მიმდინარეობს სინქრონიზაცია...';
+  statusEl.textContent = 'მიმდინარეობს Firebase-ის შემოწმება...';
   statusEl.className = 'status-connecting';
   nurseSaveBtn?.classList.add('disabled');
   nurseTemplatesBtn?.classList.add('disabled');
+}
+
+async function checkFirebaseConnection() {
+  updateSyncStatus('connecting');
+  try {
+    await getDocsFromServer(query(collection(db, "nurse_templates"), limit(1)));
+    updateSyncStatus('online');
+  } catch (_) {
+    updateSyncStatus('offline');
+  }
 }
 
 function normalizeMedicationText(raw) {
@@ -172,7 +183,6 @@ function renderNurseTables() {
 renderNurseTables();
 
 let lastSyncedMeds = [];
-let hasObservationMedicationSync = false;
 
 function applyLiveSyncPayload(payload) {
   if (!payload) return;
@@ -197,25 +207,15 @@ function applyLiveSyncPayload(payload) {
     }
   });
   lastSyncedMeds = meds.slice(0, nameInputs.length);
-  hasObservationMedicationSync = meds.length > 0;
   pushHistorySnapshot();
 }
 
 async function syncFromObservation() {
-  updateSyncStatus('connecting');
-  readLocalSync();
-  try {
-    const snap = await getDoc(liveSyncRef);
-    if (snap.exists()) {
-      applyLiveSyncPayload(snap.data());
-      updateSyncStatus('online');
-    } else {
-      updateSyncStatus('offline');
-    }
-  } catch (_) {
-    updateSyncStatus('offline');
-    readLocalSync();
+  const synced = readLocalSync();
+  if (!synced) {
+    alert('ამავე კომპიუტერზე ჯერ დანიშნულების ფურცელი შეავსეთ ან ერთხელ გახსენით.');
   }
+  return synced;
 }
 window.syncFromObservation = syncFromObservation;
 
@@ -281,6 +281,22 @@ function applyNurseTemplatePayload(data, opts = {}) {
   pushHistorySnapshot();
 }
 
+function firstPageHasContent() {
+  const headerIds = ['nurseHistoryNo', 'nurseDiagnosis', 'nurseFullName', 'nurseAdmissionDate'];
+  const headerFilled = headerIds.some(id => {
+    const el = document.getElementById(id);
+    return Boolean(el && el.value.trim());
+  });
+  if (headerFilled) return true;
+
+  const page1NameFilled = Array.from(document.querySelectorAll('#nurseExpense1 .n-name-input'))
+    .some(el => el.value.trim());
+  if (page1NameFilled) return true;
+
+  return Array.from(document.querySelectorAll('#nurseExpense1 .n-qty input'))
+    .some(el => el.value.trim());
+}
+
 window.openNurseTemplateModal = function() {
   if (nurseTemplatesBtn?.classList.contains('disabled')) {
     alert('ინტერნეტი არ არის — შაბლონები მიუწვდომელია');
@@ -328,8 +344,13 @@ window.loadNurseTemplateById = async function(id) {
   try {
     const snap = await getDoc(doc(db, "nurse_templates", id));
     if (snap.exists()) {
-      applyNurseTemplatePayload(snap.data().payload, { onlySecondPage: hasObservationMedicationSync });
-      alert(`შაბლონი „${snap.data().name}“ ჩაიტვირთა!`);
+      const preserveFirstPage = firstPageHasContent();
+      applyNurseTemplatePayload(snap.data().payload, { onlySecondPage: preserveFirstPage });
+      alert(
+        preserveFirstPage
+          ? `შაბლონი „${snap.data().name}“ ჩაიტვირთა. პირველი გვერდი შენარჩუნდა, ჩაიტვირთა მხოლოდ მეორე გვერდი.`
+          : `შაბლონი „${snap.data().name}“ ჩაიტვირთა!`
+      );
       window.closeNurseTemplateModal();
     }
   } catch (err) {
@@ -382,7 +403,6 @@ window.clearNurseAll = function() {
   renderNurseTables();
   clearSelection();
   lastSyncedMeds = [];
-  hasObservationMedicationSync = false;
   attachSelectionHandlers();
   document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-page=\"1\"]')?.classList.add('active');
@@ -393,10 +413,13 @@ window.clearNurseAll = function() {
 
 function readLocalSync() {
   try {
-    const raw = localStorage.getItem('observation_live_sync');
-    if (!raw) return;
+    const raw = localStorage.getItem(LIVE_SYNC_STORAGE_KEY);
+    if (!raw) return false;
     applyLiveSyncPayload(JSON.parse(raw));
-  } catch (_) {}
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 document.querySelectorAll('[data-page]').forEach(btn => {
@@ -746,29 +769,18 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-updateSyncStatus('connecting');
+window.addEventListener('online', () => {
+  updateSyncStatus('connecting');
+  setTimeout(checkFirebaseConnection, 800);
+});
+window.addEventListener('offline', () => updateSyncStatus('offline'));
+
+checkFirebaseConnection();
 readLocalSync();
-syncFromObservation();
 pushHistorySnapshot(true);
 window.addEventListener('storage', (e) => {
-  if (e.key !== 'observation_live_sync' || !e.newValue) return;
+  if (e.key !== LIVE_SYNC_STORAGE_KEY || !e.newValue) return;
   try {
     applyLiveSyncPayload(JSON.parse(e.newValue));
   } catch (_) {}
-});
-
-onSnapshot(liveSyncRef, (snap) => {
-  updateSyncStatus('online');
-  if (snap.exists()) {
-    applyLiveSyncPayload(snap.data());
-  } else {
-    readLocalSync();
-  }
-}, async () => {
-  updateSyncStatus('offline');
-  try {
-    const fallback = await getDoc(liveSyncRef);
-    if (fallback.exists()) applyLiveSyncPayload(fallback.data());
-  } catch (_) {}
-  readLocalSync();
 });

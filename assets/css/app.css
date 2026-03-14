@@ -25,6 +25,7 @@
 
   .page { display:none; padding:4px 6px; }
   .page.active { display:block; }
+  .page-print-title { display:none; }
 
   /* Info ბლოკი – 4 სვეტი, თითო უჯრაში label და value ერთ ხაზზე */
   .info {
@@ -216,7 +217,7 @@
       break-after:page;
       page-break-inside:avoid;
       break-inside:avoid-page;
-      padding:5mm !important;
+      padding:4mm !important;
       width:297mm !important;
       height:210mm !important;
       min-height:210mm !important;
@@ -240,5 +241,50 @@
     .drug input, .dose input { font-size:6.3pt !important; }
     .nurse-sheet th, .nurse-sheet td, .nurse-sheet .n-qty input { font-size:10pt !important; }
     .signature-img { max-height:26px !important; }
+
+    .page.page-observation {
+      display:flex !important;
+      flex-direction:column;
+      gap:2mm;
+      padding:3mm 4mm 4mm !important;
+    }
+    .page.page-observation .page-print-title {
+      display:block !important;
+      text-align:center;
+      font-size:11pt;
+      font-weight:700;
+      color:#000;
+      margin:0;
+      line-height:1.2;
+    }
+    .page.page-observation .info {
+      font-size:8.1pt !important;
+      gap:2mm 4mm !important;
+      margin-bottom:0 !important;
+    }
+    .page.page-observation .info input,
+    .page.page-observation .info select {
+      font-size:7.9pt !important;
+      padding:1px 2px !important;
+    }
+    .page.page-observation #meds {
+      flex:1 1 auto;
+      margin-top:0 !important;
+    }
+    .page.page-observation #meds tr {
+      height:4.9mm;
+    }
+    .page.page-observation #meds th,
+    .page.page-observation #meds td {
+      font-size:7pt !important;
+      padding:1px !important;
+    }
+    .page.page-observation #meds .num,
+    .page.page-observation #meds .drug,
+    .page.page-observation #meds .drug input,
+    .page.page-observation #meds .dose input,
+    .page.page-observation #meds .time {
+      font-size:7pt !important;
+    }
   }
 </style>

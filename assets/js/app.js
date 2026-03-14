@@ -4,11 +4,12 @@
     collection,
     addDoc,
     getDocs,
+    getDocsFromServer,
     doc,
-    setDoc,
     deleteDoc,
     orderBy,
     query,
+    limit,
     serverTimestamp,
     getDoc
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -29,7 +30,7 @@
   const statusEl = document.getElementById('firebaseStatus');
   const templatesBtn = document.getElementById('templatesBtn');
   const saveBtn = document.getElementById('saveBtn');
-  const liveSyncRef = doc(db, "observation_live", "current");
+  const LIVE_SYNC_STORAGE_KEY = 'observation_live_sync';
   const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
   const EXCLUDED_MEDICATION_NAMES = new Set([
     'ანტიბაქტერიული თერაპია',
@@ -43,12 +44,12 @@
 
   function updateFirebaseStatus(connected) {
     if (connected) {
-      statusEl.textContent = "დაუკავშირდა Firebase-ს";
+      statusEl.textContent = "Firebase ხელმისაწვდომია - შაბლონები მუშაობს";
       statusEl.className = "status-online";
       templatesBtn.classList.remove('disabled');
       saveBtn.classList.remove('disabled');
     } else {
-      statusEl.textContent = "ოფლაინ რეჟიმი (ინტერნეტი არ არის)";
+      statusEl.textContent = "ოფლაინ რეჟიმი - შაბლონები მიუწვდომელია, local გადატანა მუშაობს";
       statusEl.className = "status-offline";
       templatesBtn.classList.add('disabled');
       saveBtn.classList.add('disabled');
@@ -57,11 +58,7 @@
 
   async function checkFirebaseConnection() {
     try {
-      await setDoc(liveSyncRef, {
-        heartbeat: Date.now(),
-        heartbeatAt: serverTimestamp()
-      }, { merge: true });
-      await getDoc(liveSyncRef);
+      await getDocsFromServer(query(collection(db, "observation_templates"), limit(1)));
       updateFirebaseStatus(true);
     } catch (err) {
       updateFirebaseStatus(false);
@@ -149,10 +146,7 @@
   async function pushLiveSyncNow() {
     const payload = collectLiveSyncPayload();
     try {
-      localStorage.setItem('observation_live_sync', JSON.stringify(payload));
-    } catch (_) {}
-    try {
-      await setDoc(liveSyncRef, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+      localStorage.setItem(LIVE_SYNC_STORAGE_KEY, JSON.stringify(payload));
     } catch (_) {}
   }
 

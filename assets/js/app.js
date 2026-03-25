@@ -164,6 +164,18 @@
   const LIVE_SYNC_STORAGE_KEY = 'observation_live_sync';
   const PASSPORT_IDS = ['fullName', 'hist', 'gender', 'age', 'admission', 'today', 'icd', 'dept', 'blood', 'room', 'allergy'];
   const DATE_FIELD_IDS = new Set(['admission', 'today']);
+  const SIGNATURE_OPTIONS = {
+    'doctor-nino': {
+      slotId: 'doctorSignatureSlot',
+      imgId: 'doctorSignatureImg',
+      src: 'ნინო კიკვაძე.png'
+    },
+    'nurse-giorgi': {
+      slotId: 'nurseSignatureSlot',
+      imgId: 'nurseSignatureImg',
+      src: 'giorgi esign.png'
+    }
+  };
   const EXCLUDED_MEDICATION_NAMES = new Set([
     'ანტიბაქტერიული თერაპია',
     'სედაცია',
@@ -452,6 +464,44 @@
     return passport;
   }
 
+  function getSignatureSelection() {
+    return {
+      doctor: document.getElementById('doctorSignatureSelect')?.value || '',
+      nurse: document.getElementById('nurseSignatureSelect')?.value || ''
+    };
+  }
+
+  function renderSignatureSlots() {
+    const selections = getSignatureSelection();
+    [
+      { role: 'doctor', slotId: 'doctorSignatureSlot', imgId: 'doctorSignatureImg' },
+      { role: 'nurse', slotId: 'nurseSignatureSlot', imgId: 'nurseSignatureImg' }
+    ].forEach(({ role, slotId, imgId }) => {
+      const slot = document.getElementById(slotId);
+      const img = document.getElementById(imgId);
+      if (!(slot instanceof HTMLElement) || !(img instanceof HTMLImageElement)) return;
+
+      const signature = SIGNATURE_OPTIONS[selections[role]];
+      if (signature) {
+        slot.classList.add('has-signature');
+        img.src = encodeURI(signature.src);
+        img.classList.remove('missing');
+      } else {
+        slot.classList.remove('has-signature');
+        img.removeAttribute('src');
+        img.classList.add('missing');
+      }
+    });
+  }
+
+  function applySignatureSelection(data = {}) {
+    const doctorSelect = document.getElementById('doctorSignatureSelect');
+    const nurseSelect = document.getElementById('nurseSignatureSelect');
+    if (doctorSelect) doctorSelect.value = data.doctor || '';
+    if (nurseSelect) nurseSelect.value = data.nurse || '';
+    renderSignatureSlots();
+  }
+
   function setPassportData(data, opts = {}) {
     const preserveExisting = Boolean(opts.preserveExisting);
     PASSPORT_IDS.forEach(id => {
@@ -538,6 +588,7 @@
     return {
       header: getPassportData(),
       form: getFormData(),
+      signatures: getSignatureSelection(),
       historyNumber: currentHistory,
       patientContext: {
         pid: patientContext.pid,
@@ -561,6 +612,7 @@
     if (!data) return;
     applyingPatientSheet = true;
     if (data.header) setPassportData(data.header);
+    applySignatureSelection(data.signatures || {});
     applyFormData(data.form || data.payload || {});
     applyPatientDefaults({ preserveExisting: true });
     lastLoadedHistoryNumber = normalizeHistoryNumber(data.historyNumber || data.header?.hist || '');
@@ -704,6 +756,7 @@
 
   async function initializePatientSheet() {
     applyPatientDefaults({ preserveExisting: false });
+    applySignatureSelection({});
     const initialHistory = getCurrentHistoryNumber() || patientContext.history;
     const draftPayload = readPatientDraft(initialHistory);
     let loadedPayload = null;
@@ -799,6 +852,22 @@
     if (liveSyncTimer) clearTimeout(liveSyncTimer);
     liveSyncTimer = setTimeout(pushLiveSyncNow, 300);
   }
+
+  ['doctorSignatureSelect', 'nurseSignatureSelect'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLSelectElement)) return;
+    el.addEventListener('change', () => {
+      renderSignatureSlots();
+      schedulePatientSheetSave();
+    });
+  });
+
+  ['doctorSignatureImg', 'nurseSignatureImg'].forEach(id => {
+    const img = document.getElementById(id);
+    if (!(img instanceof HTMLImageElement)) return;
+    img.addEventListener('load', () => img.classList.remove('missing'));
+    img.addEventListener('error', () => img.classList.add('missing'));
+  });
 
   PASSPORT_IDS.forEach(id => {
     const el = document.getElementById(id);
@@ -1343,6 +1412,7 @@
     rows[33].querySelector('.drug input').value = 'შაქრის კონტროლი';
 
     clearSelection();
+    renderSignatureSlots();
     applyPatientDefaults({ preserveExisting: false });
     updName();
     scheduleLiveSync();

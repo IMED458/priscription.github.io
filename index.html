@@ -22,6 +22,22 @@
     <button class="btn" onclick="window.open('nurse.html', '_blank', 'noopener')">ექთანი</button>
     <button class="btn print" onclick="window.print()">ბეჭდვა</button>
     <button class="btn save-sheet" id="patientSaveBtn" onclick="savePatientSheet(true)">save</button>
+
+    <label class="signature-picker" for="doctorSignatureSelect">
+      ექიმის ხელმოწერა
+      <select id="doctorSignatureSelect">
+        <option value="">ხაზი</option>
+        <option value="doctor-nino">ნინო კიკვაძე</option>
+      </select>
+    </label>
+
+    <label class="signature-picker" for="nurseSignatureSelect">
+      ექთნის ხელმოწერა
+      <select id="nurseSignatureSelect">
+        <option value="">ხაზი</option>
+        <option value="nurse-giorgi">გიორგი</option>
+      </select>
+    </label>
     
     <input type="text" id="templateName" placeholder="შაბლონის სახელი">
     <button class="btn" id="templateSaveBtn" onclick="saveTemplate()">შაბლონის შენახვა</button>
@@ -106,8 +122,24 @@
     <table id="enteral" style="margin:6px 0;"></table>
     <table id="other"></table>
     <div class="sign">
-      <div style="text-align:center"><div class="line"></div><br>ექიმი</div>
-      <div style="text-align:center"><div class="line"></div><br>ექთანი</div>
+      <div class="signature-slot" id="doctorSignatureSlot">
+        <div class="signature-placeholder">
+          <div class="line signature-line"></div>
+          <div class="signature-wrap">
+            <img class="signature-img missing" id="doctorSignatureImg" alt="ექიმის ხელმოწერა">
+          </div>
+        </div>
+        <div class="signature-label">ექიმი</div>
+      </div>
+      <div class="signature-slot" id="nurseSignatureSlot">
+        <div class="signature-placeholder">
+          <div class="line signature-line"></div>
+          <div class="signature-wrap">
+            <img class="signature-img missing" id="nurseSignatureImg" alt="ექთნის ხელმოწერა">
+          </div>
+        </div>
+        <div class="signature-label">ექთანი</div>
+      </div>
     </div>
   </div>
 

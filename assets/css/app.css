@@ -23,6 +23,25 @@
   .btn.delete { background:#991b1b; }
   .btn.active { background:#1e40af; }
   .btn.disabled { background:#94a3b8 !important; cursor:not-allowed !important; opacity:0.7; }
+  .signature-picker {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    font-weight:700;
+    color:#0f172a;
+    background:#e2e8f0;
+    padding:6px 10px;
+    border-radius:8px;
+  }
+  .signature-picker select {
+    border:1px solid #cbd5e1;
+    background:#fff;
+    border-radius:6px;
+    padding:4px 8px;
+    font-size:12px;
+    min-width:120px;
+  }
 
   .page { display:none; padding:4px 6px; }
   .page.active { display:block; }
@@ -88,9 +107,14 @@
 
   .sign { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:40px; font-size:10pt; }
   .line { border-bottom:1.5px solid #000; height:10px; margin-top:4px; }
+  .signature-slot { text-align:center; }
+  .signature-placeholder { min-height:38px; display:flex; align-items:flex-end; justify-content:center; position:relative; }
+  .signature-slot.has-signature .signature-line { display:none; }
   .signature-wrap { display:flex; justify-content:center; min-height:34px; align-items:flex-end; }
+  .signature-slot:not(.has-signature) .signature-wrap { display:none; }
   .signature-img { max-width:120px; max-height:32px; object-fit:contain; }
   .signature-img.missing { display:none; }
+  .signature-label { margin-top:4px; }
 
   .nurse-pdf-page {
     background:#fff;

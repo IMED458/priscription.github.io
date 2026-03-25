@@ -108,11 +108,11 @@
   .sign { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:40px; font-size:10pt; }
   .line { border-bottom:1.5px solid #000; height:10px; margin-top:4px; }
   .signature-slot { text-align:center; }
-  .signature-placeholder { min-height:38px; display:flex; align-items:flex-end; justify-content:center; position:relative; }
+  .signature-placeholder { min-height:46px; display:flex; align-items:flex-end; justify-content:center; position:relative; }
   .signature-slot.has-signature .signature-line { display:none; }
-  .signature-wrap { display:flex; justify-content:center; min-height:34px; align-items:flex-end; }
+  .signature-wrap { display:flex; justify-content:center; min-height:40px; align-items:flex-end; }
   .signature-slot:not(.has-signature) .signature-wrap { display:none; }
-  .signature-img { max-width:120px; max-height:32px; object-fit:contain; }
+  .signature-img { max-width:150px; max-height:40px; object-fit:contain; }
   .signature-img.missing { display:none; }
   .signature-label { margin-top:4px; }
 
@@ -265,7 +265,7 @@
     .time { font-size:6pt !important; }
     .drug input, .dose input { font-size:6.3pt !important; }
     .nurse-sheet th, .nurse-sheet td, .nurse-sheet .n-qty input { font-size:10pt !important; }
-    .signature-img { max-height:26px !important; }
+    .signature-img { max-width:160px !important; max-height:34px !important; }
 
     .page.page-observation {
       display:flex !important;

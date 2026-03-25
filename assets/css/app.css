@@ -113,6 +113,7 @@
   .signature-wrap { display:flex; justify-content:center; min-height:40px; align-items:flex-end; }
   .signature-slot:not(.has-signature) .signature-wrap { display:none; }
   .signature-img { max-width:150px; max-height:40px; object-fit:contain; }
+  #nurseSignatureImg { max-width:190px; max-height:52px; }
   .signature-img.missing { display:none; }
   .signature-label { margin-top:4px; }
 
@@ -266,6 +267,7 @@
     .drug input, .dose input { font-size:6.3pt !important; }
     .nurse-sheet th, .nurse-sheet td, .nurse-sheet .n-qty input { font-size:10pt !important; }
     .signature-img { max-width:160px !important; max-height:34px !important; }
+    #nurseSignatureImg { max-width:210px !important; max-height:44px !important; }
 
     .page.page-observation {
       display:flex !important;

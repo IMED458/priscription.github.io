@@ -200,6 +200,10 @@ function normalizeMedicationText(raw) {
   return (raw || '').replace(/\s+/g, ' ').trim();
 }
 
+function isSodiumChlorideMedication(text) {
+  return /(?:na\s*cl|nacl|natrii?\s*chlorid|sodium\s+chloride|ნატრიუმ)/i.test(text);
+}
+
 function extractMedicationName(raw) {
   const text = normalizeMedicationText(raw);
   if (!text) return '';
@@ -207,6 +211,11 @@ function extractMedicationName(raw) {
   const excludedNormalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
   for (const ex of EXCLUDED_MEDICATION_NAMES) {
     if (excludedNormalized === ex.toLowerCase()) return '';
+  }
+
+  // Only NaCl keeps the full prescription text so the 100/500/1000 ml volume is preserved.
+  if (isSodiumChlorideMedication(text)) {
+    return text;
   }
 
   const m = text.match(/^(sol\.?)\s+([^\s,;()]+)/i);
